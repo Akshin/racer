@@ -1,0 +1,89 @@
+// Сброс браузерных стилей: убираем то, что мешает выстраивать вёрстку с нуля.
+// Тема (палитра, кнопки, типографика) живёт в main.scss, здесь только обнуление.
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+// Отступы задаём осознанно в компонентах, а не полагаемся на браузерные.
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd,
+ul,
+ol {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+}
+
+html {
+  // Плавная прокрутка к анкорам, но не в ущерб людям с укачиванием (см. блок ниже).
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+// Медиа по умолчанию inline — из-за этого под ними появляется лишний зазор.
+// canvas в списке важен: на нём будет сцена PixiJS.
+img,
+picture,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+// Элементы форм не наследуют шрифт документа.
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+// Длинные слова не должны разрывать сетку.
+p,
+h1,
+h2,
+h3,
+h4 {
+  overflow-wrap: break-word;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

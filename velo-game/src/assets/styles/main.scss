@@ -1,0 +1,16 @@
+// Единственный глобальный стиль: сброс и оформление страницы целиком.
+// Всё остальное описывают компоненты, подключая theme.scss.
+
+@use 'reset';
+@use 'theme' as t;
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: t.$bg;
+  color: t.$text;
+  font-family: t.$font-stack;
+  font-size: 15px;
+}

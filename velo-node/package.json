@@ -1,0 +1,25 @@
+{
+  "name": "velo-node",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Adapter: reads cadence from Wahoo RPM (BLE CSC) sensors and streams telemetry to the game over WebSocket",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/index.ts",
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stoprocent/noble": "^2.8.0",
+    "ant-plus-next": "^0.4.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/ws": "^8.18.1",
+    "typescript": "~6.0.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

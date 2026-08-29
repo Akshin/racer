@@ -1,0 +1,71 @@
+// Инструменты темы: палитра и миксины повторяющихся элементов.
+// Сам файл ничего в CSS не печатает — раскрывается только там, где его подключили
+// через `@use '@/assets/styles/theme' as t`.
+
+$bg: #0d1117;
+$surface: #161b22;
+$surface-hover: #1c232c;
+$border: #2c333d;
+$text: #e6edf3;
+$muted: #8b949e;
+$accent: #2f81f7;
+$ok: #3fb950;
+$warn: #d29922;
+$error: #f85149;
+
+$radius: 10px;
+$font-stack:
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  sans-serif;
+$font-mono: ui-monospace, monospace;
+
+/// Обычная кнопка. Модификатор «главного действия» — в button-primary.
+@mixin button {
+  padding: 0.5rem 1rem;
+  color: $text;
+  background: $surface-hover;
+  border: 1px solid $border;
+  border-radius: $radius;
+  transition: border-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: $accent;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+@mixin button-primary {
+  color: #fff;
+  font-weight: 600;
+  background: $accent;
+  border-color: $accent;
+}
+
+@mixin field {
+  padding: 0.5rem 0.75rem;
+  color: $text;
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: $radius;
+
+  &:focus-visible {
+    outline: none;
+    border-color: $accent;
+  }
+}
+
+/// Карточка-блок страницы: фон, рамка, внутренняя сетка.
+@mixin card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius;
+}
