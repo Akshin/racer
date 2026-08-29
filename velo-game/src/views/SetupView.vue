@@ -1,13 +1,16 @@
 <script setup lang="ts">
 /**
- * Корневая утилитарная страница: подключение к адаптеру, проверка обоих датчиков
- * и журнал событий. В гонку пускает только когда оба тренажёра реально крутятся.
+ * Корневая утилитарная страница: подключение к адаптеру, проверка датчиков
+ * и журнал событий. В гонку пускает, когда нужные тренажёры реально крутятся.
  */
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { RACE_DISTANCES_M, SPEED_SCALE_MAX, SPEED_SCALE_MIN, SPEED_SCALE_STEP } from '@/game/config'
 import { useSessionStore } from '@/stores/session'
+import { useSettingsStore } from '@/stores/settings'
 
 const session = useSessionStore()
+const settings = useSettingsStore()
 const router = useRouter()
 const onlyErrors = ref(false)
 
@@ -30,13 +33,21 @@ const visibleLogs = computed(() =>
 function time(at: number): string {
   return new Date(at).toLocaleTimeString('ru-RU')
 }
+
+function distanceLabel(meters: number): string {
+  const km = meters / 1000
+  return km < 1 ? `${km} км` : `${km.toFixed(0)} км`
+}
 </script>
 
 <template>
   <main class="page">
     <header>
       <h1>Проверка перед заездом</h1>
-      <p class="muted">Подключитесь к адаптеру и покрутите педали на обоих тренажёрах.</p>
+      <p class="muted">
+        Подключитесь к адаптеру и покрутите педали. Для зала с одним велосипедом включите
+        «достаточно одного тренажёра».
+      </p>
     </header>
 
     <section class="card">
@@ -87,6 +98,39 @@ function time(at: number): string {
           {{ check.spinning ? '✓ обороты зафиксированы' : 'ожидаю первый оборот педалей' }}
         </p>
       </article>
+    </section>
+
+    <section class="card">
+      <strong>Заезд</strong>
+      <label class="option">
+        <input v-model="settings.allowOneTrainer" type="checkbox" />
+        достаточно одного тренажёра
+      </label>
+      <p class="muted">
+        Множитель дороги не меняет км/ч в панели — только как быстро набегает разметка.
+      </p>
+      <label class="scale">
+        <span>Скорость дороги ×{{ settings.speedScale.toFixed(2) }}</span>
+        <input
+          v-model.number="settings.speedScale"
+          type="range"
+          :min="SPEED_SCALE_MIN"
+          :max="SPEED_SCALE_MAX"
+          :step="SPEED_SCALE_STEP"
+        />
+        <span class="muted">{{ SPEED_SCALE_MIN }}× … {{ SPEED_SCALE_MAX }}×</span>
+      </label>
+      <div class="distances" role="group" aria-label="Длина заезда">
+        <button
+          v-for="meters in RACE_DISTANCES_M"
+          :key="meters"
+          type="button"
+          :class="{ primary: settings.raceDistanceM === meters }"
+          @click="settings.raceDistanceM = meters"
+        >
+          {{ distanceLabel(meters) }}
+        </button>
+      </div>
     </section>
 
     <section class="card">
@@ -210,6 +254,31 @@ header {
   &.ok {
     color: t.$ok;
   }
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scale {
+  display: grid;
+  gap: 0.35rem;
+
+  input[type='range'] {
+    width: 100%;
+    padding: 0;
+    accent-color: t.$accent;
+    background: transparent;
+    border: none;
+  }
+}
+
+.distances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .wide {

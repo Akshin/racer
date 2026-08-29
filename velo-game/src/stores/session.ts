@@ -7,6 +7,7 @@ import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { PLAYER_IDS, PROTOCOL_VERSION } from '@/net/protocol'
 import { TelemetryClient } from '@/net/telemetryClient'
+import { useSettingsStore } from '@/stores/settings'
 
 /** Телеметрия не приходит дольше этого времени — связь есть, а данных нет. */
 const STALE_MS = 1500
@@ -37,6 +38,7 @@ function defaultUrl(): string {
 }
 
 export const useSessionStore = defineStore('session', () => {
+  const settings = useSettingsStore()
   const url = ref(window.localStorage.getItem(URL_STORAGE_KEY) ?? defaultUrl())
   const status = ref<ConnectionStatus>('offline')
   const checks = ref(emptyChecks())
@@ -114,12 +116,21 @@ export const useSessionStore = defineStore('session', () => {
     if (status.value !== 'online') list.push('Нет соединения с адаптером')
     else if (!dataFlowing.value) list.push('Соединение есть, но телеметрия не приходит')
 
-    PLAYER_IDS.forEach((id, index) => {
-      const check = checks.value[id]
-      const label = `Тренажёр ${index + 1}`
-      if (!check.telemetry.connected) list.push(`${label}: датчик не привязан`)
-      else if (!check.spinning) list.push(`${label}: покрутите педали для проверки датчика`)
-    })
+    if (settings.allowOneTrainer) {
+      const anyReady = PLAYER_IDS.some((id) => {
+        const check = checks.value[id]
+        return check !== undefined && check.telemetry.connected && check.spinning
+      })
+      if (!anyReady) list.push('Покрутите педали хотя бы на одном тренажёре')
+    } else {
+      PLAYER_IDS.forEach((id, index) => {
+        const check = checks.value[id]
+        const label = `Тренажёр ${index + 1}`
+        if (check === undefined || !check.telemetry.connected)
+          list.push(`${label}: датчик не привязан`)
+        else if (!check.spinning) list.push(`${label}: покрутите педали для проверки датчика`)
+      })
+    }
     return list
   })
 
@@ -136,6 +147,21 @@ export const useSessionStore = defineStore('session', () => {
     verified.value = true
     window.sessionStorage.setItem(VERIFIED_STORAGE_KEY, '1')
   })
+
+  // Сняли «достаточно одного» — прежняя проверка одним датчиком больше не считается пройденной.
+  watch(
+    () => settings.allowOneTrainer,
+    (allow) => {
+      if (allow) return
+      const allReady = PLAYER_IDS.every((id) => {
+        const check = checks.value[id]
+        return check !== undefined && check.telemetry.connected && check.spinning
+      })
+      if (allReady) return
+      verified.value = false
+      window.sessionStorage.removeItem(VERIFIED_STORAGE_KEY)
+    },
+  )
 
   function connect(): void {
     window.localStorage.setItem(URL_STORAGE_KEY, url.value)

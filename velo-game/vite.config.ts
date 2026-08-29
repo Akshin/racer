@@ -7,7 +7,14 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    vue(),
+    vue({
+      script: {
+        // Все типы проекта лежат в одном .d.ts. Компилятор SFC ищет типы только в самом
+        // файле и в его импортах, поэтому глобальные объявления нужно указать явно —
+        // иначе defineProps<...>() с ними не собирается.
+        globalTypeFiles: [fileURLToPath(new URL('./src/types.d.ts', import.meta.url))],
+      },
+    }),
     vueDevTools(),
   ],
   resolve: {
