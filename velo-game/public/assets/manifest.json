@@ -1,0 +1,12 @@
+{
+  "bundles": [
+    {
+      "name": "default",
+      "assets": []
+    },
+    {
+      "name": "race",
+      "assets": []
+    }
+  ]
+}

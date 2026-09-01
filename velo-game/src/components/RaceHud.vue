@@ -38,19 +38,6 @@ const gaugeFill = computed(
     class="hud"
     :class="[`hud--player-${index + 1}`, { 'hud--offline': !telemetry.connected }]"
   >
-    <header class="hud__top">
-      <span class="hud__badge">{{ index + 1 }}</span>
-      <div class="progress">
-        <span class="progress__fill" :style="{ width: `${progress * 100}%` }"></span>
-        <span class="progress__mark" :style="{ left: `${rivalProgress * 100}%` }"></span>
-        <span
-          class="progress__mark progress__mark--me"
-          :style="{ left: `${progress * 100}%` }"
-        ></span>
-      </div>
-      <span class="hud__place">{{ place }}-й</span>
-    </header>
-
     <footer class="hud__bottom">
       <dl class="panel">
         <div v-for="row in rows" :key="row.label" class="panel__row">
@@ -79,7 +66,7 @@ const gaugeFill = computed(
   --player: #{t.$player-1};
 
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
   height: 100%;
   padding: clamp(0.75rem, 2vh, 2rem);
   color: #fff;
@@ -98,62 +85,6 @@ const gaugeFill = computed(
     .gauge {
       opacity: 0.45;
     }
-  }
-}
-
-.hud__top {
-  display: flex;
-  align-items: center;
-  gap: 0.6em;
-}
-
-.hud__badge {
-  display: grid;
-  place-content: center;
-  width: 1.8em;
-  height: 1.8em;
-  font-weight: 700;
-  background: var(--player);
-  border-radius: 50%;
-}
-
-.hud__place {
-  min-width: 2.5em;
-  color: var(--player);
-  font-weight: 700;
-  text-align: right;
-}
-
-.progress {
-  position: relative;
-  flex: 1;
-  height: 0.5em;
-  background: rgb(0 0 0 / 45%);
-  border: 1px solid rgb(255 255 255 / 15%);
-  border-radius: 999px;
-
-  &__fill {
-    position: absolute;
-    inset: 0 auto 0 0;
-    background: var(--player);
-    border-radius: inherit;
-    transition: width 0.2s linear;
-  }
-
-  &__mark {
-    position: absolute;
-    top: 50%;
-    width: 0.9em;
-    height: 0.9em;
-    background: rgb(255 255 255 / 65%);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    transition: left 0.2s linear;
-  }
-
-  &__mark--me {
-    background: #fff;
-    box-shadow: 0 0 0 2px var(--player);
   }
 }
 

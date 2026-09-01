@@ -47,6 +47,7 @@ export class Lane {
   /** Множитель визуальной скорости: меняется со страницы проверки без перезапуска. */
   #visualScale = 1
 
+  /** Собирает слои половины экрана: фон, пунктир, плашку «нет сигнала», маску обрезки. */
   constructor() {
     const vertices = new Float32Array(MAX_DASHES * COORDS_PER_QUAD)
     const indices = new Uint32Array(MAX_DASHES * 6)
@@ -72,6 +73,7 @@ export class Lane {
     this.view.mask = this.#mask
   }
 
+  /** Пересчитывает камеру и всю статичную картинку, когда меняется размер половины экрана. */
   resize(width: number, height: number): void {
     this.#projection = createProjection(width, height)
     this.#mask.clear().rect(0, 0, width, height).fill(0xffffff)
@@ -80,6 +82,10 @@ export class Lane {
     this.#drawDashes()
   }
 
+  /**
+   * Один кадр анимации: по телеметрии обновляет «пробег» дороги и двигает пунктир.
+   * Вызывается из ticker Pixi (~60 раз/с), не путать с километрами в HUD — те с адаптера.
+   */
   update(deltaMs: number, telemetry: PlayerTelemetry, visualScale: number): void {
     // Скорость с адаптера уже сглажена, но при потере датчика падает в ноль
     // мгновенно — своё сглаживание нужно, чтобы дорога замирала плавно.
@@ -98,6 +104,7 @@ export class Lane {
     this.#drawDashes()
   }
 
+  /** Рисует небо, землю, асфальт и сплошные белые линии по краям — один раз на resize. */
   #drawStatic(): void {
     const projection = this.#projection
     const { width, height, horizonY } = projection
@@ -139,6 +146,7 @@ export class Lane {
     }
   }
 
+  /** Сдвигает штрихи центрального пунктира вперёд — от #traveled и visualScale. */
   #drawDashes(): void {
     const projection = this.#projection
     const vertices = this.#dashes.vertices
@@ -168,6 +176,7 @@ export class Lane {
     this.#dashes.vertices = vertices
   }
 
+  /** Подгоняет размер и позицию плашки «нет сигнала» под высоту экрана. */
   #layoutOffline(): void {
     const size = Math.round(this.#projection.height * 0.022)
     const padX = size * 0.8

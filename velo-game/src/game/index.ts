@@ -5,6 +5,7 @@
 
 import { Application, Graphics, type Ticker } from 'pixi.js'
 import { PLAYER_IDS } from '@/net/protocol'
+import { loadRaceAssets } from './assets'
 import { COLOR_DIVIDER, DIVIDER_WIDTH_PX } from './config'
 import { Lane } from './lane'
 
@@ -14,6 +15,8 @@ export async function createGame(
   visualScale: () => number,
 ): Promise<Game> {
   const app = new Application()
+
+  await loadRaceAssets()
 
   await app.init({
     // Канвас следит за размером контейнера, а не окна: вокруг него есть вёрстка страницы.

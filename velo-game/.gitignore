@@ -37,3 +37,6 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# AssetPack: кэш пайплайна. Сборка лежит в public/assets.
+.assetpack

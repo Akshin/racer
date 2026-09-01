@@ -126,12 +126,6 @@ declare global {
     index: number
     telemetry: PlayerTelemetry
     sensor: SensorInfo | null
-    /** 1 — лидер по дистанции. */
-    place: number
-    /** Доля пройденного заезда, 0..1. */
-    progress: number
-    /** Та же доля у лучшего из соперников — его метка на той же шкале. */
-    rivalProgress: number
     elapsedMs: number
   }
 
