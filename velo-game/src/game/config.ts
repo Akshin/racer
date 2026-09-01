@@ -38,8 +38,9 @@ export const SPEED_TAU_MS = 400
 /** Какую долю отставания от дистанции адаптера догоняем за кадр. */
 export const DISTANCE_CATCHUP = 0.08
 
-export const COLOR_SKY_TOP = 0x8ec9e8
-export const COLOR_SKY_HORIZON = 0xcfe8f5
+export const COLOR_SKY_TOP = 0x7a7b8e
+export const COLOR_SKY_MID = 0xcbb6b4
+export const COLOR_SKY_HORIZON = 0xf0d6c2
 export const COLOR_GROUND = 0x4a7a3a
 export const COLOR_ASPHALT = 0x6e747b
 export const COLOR_MARKING = 0xf2f2ee

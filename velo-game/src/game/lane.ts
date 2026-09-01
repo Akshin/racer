@@ -13,6 +13,7 @@ import {
   COLOR_GROUND,
   COLOR_MARKING,
   COLOR_SKY_HORIZON,
+  COLOR_SKY_MID,
   COLOR_SKY_TOP,
   DASH_DISTANCE_M,
   DASH_LENGTH_M,
@@ -117,6 +118,7 @@ export class Lane {
       end: { x: 0, y: 1 },
       colorStops: [
         { offset: 0, color: COLOR_SKY_TOP },
+        { offset: 0.45, color: COLOR_SKY_MID },
         { offset: 1, color: COLOR_SKY_HORIZON },
       ],
     })
