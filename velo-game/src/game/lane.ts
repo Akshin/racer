@@ -22,6 +22,7 @@ import { raceSheetTextures, raceSprite } from './assets'
 import {
   BANNER_DISTANCE_M,
   BANNER_FADE_M,
+  BANNER_GAP_M,
   BANNER_HEIGHT_M,
   BANNER_LEG_M,
   BANNER_OFFSET_M,
@@ -30,6 +31,7 @@ import {
   BANNER_PHASE_RIGHT,
   BANNER_SLOTS_PER_SIDE,
   BANNER_TUBE_M,
+  BANNER_UNTIL_M,
   BANNER_WIDTH_M,
   BERM_HEIGHT_M,
   BERM_WIDTH_M,
@@ -52,13 +54,14 @@ import {
   DASH_PERIOD_M,
   DISTANCE_CATCHUP,
   FLAG_ANCHOR_X,
+  FLAG_CLUSTER_SLOTS,
   FLAG_DISTANCE_M,
   FLAG_FADE_M,
-  FLAG_FINISH_GAPS_M,
   FLAG_HEIGHT_M,
   FLAG_OFFSET_M,
-  FLAG_ROW_COUNT,
-  FLAG_START_Z_M,
+  FLAG_PERIOD_M,
+  FLAG_ROW_GAP_M,
+  FLAG_ROWS,
   LINE_WIDTH_M,
   MAX_DASHES,
   MOUNTAINS_ANCHOR_Y,
@@ -144,7 +147,7 @@ export class Lane {
     }
 
     this.#flagTextures = raceSheetTextures('flags')
-    const flagCount = FLAG_ROW_COUNT * 2
+    const flagCount = FLAG_CLUSTER_SLOTS * FLAG_ROWS * 2
     const flagFallback = this.#flagTextures[0] ?? Texture.EMPTY
     for (let i = 0; i < flagCount; i++) {
       const sprite = new Sprite({ texture: flagFallback })
@@ -470,7 +473,7 @@ export class Lane {
     }
   }
 
-  /** Три ряда старта, один посередине дистанции, три на финише. */
+  /** Четыре ряда флагов каждые 100 м. */
   #drawFlags(): void {
     const textures = this.#flagTextures
     if (textures.length === 0) {
@@ -480,45 +483,41 @@ export class Lane {
 
     const projection = this.#projection
     const traveled = this.#traveled * this.#visualScale
+    const period = FLAG_PERIOD_M * this.#visualScale
+    const gap = FLAG_ROW_GAP_M * this.#visualScale
     const halfRoad = ROAD_WIDTH_M / 2
-    const finishZ = this.#raceDistanceM * this.#visualScale
-    const rows = [
-      ...FLAG_START_Z_M,
-      finishZ * 0.5,
-      ...FLAG_FINISH_GAPS_M.map((gap) => finishZ - gap),
-    ]
+    const baseCluster = Math.floor(traveled / period)
     let used = 0
 
-    for (let row = 0; row < rows.length; row++) {
-      const worldZ = rows[row]
-      if (worldZ === undefined) continue
-      const startRows = FLAG_START_Z_M.length
-      const color = row < startRows ? row : row === startRows ? 1 : row - startRows - 1
-      for (let side = 0; side < 2; side++) {
-        const sprite = this.#flagPool[used]
-        if (sprite === undefined) return
-        used += 1
-
+    for (let slot = 0; slot < FLAG_CLUSTER_SLOTS; slot++) {
+      const cluster = baseCluster + slot
+      if (cluster < 0) continue
+      for (let row = 0; row < FLAG_ROWS; row++) {
+        const worldZ = cluster * period + row * gap
         const camZ = worldZ - traveled
         const visible = camZ > projection.nearZ && camZ < FLAG_DISTANCE_M
-        sprite.visible = visible
-        if (!visible) continue
+        for (let side = 0; side < 2; side++) {
+          const sprite = this.#flagPool[used]
+          if (sprite === undefined) return
+          used += 1
+          sprite.visible = visible
+          if (!visible) continue
 
-        const texture = textures[(color * 2 + side) % textures.length]
-        if (texture !== undefined) sprite.texture = texture
-        const px = projection.scale(camZ)
-        const size = (FLAG_HEIGHT_M * px) / sprite.texture.height
-        const fade = Math.min(1, Math.max(0, (FLAG_DISTANCE_M - camZ) / FLAG_FADE_M))
-        const sign = side === 0 ? -1 : 1
-        sprite.alpha = fade * fade * (3 - 2 * fade)
-        // Полотно в PNG справа от древка: справа зеркалим, оба смотрят на трассу.
-        sprite.scale.set(sign > 0 ? -size : size, size)
-        const rise = BERM_HEIGHT_M * Math.min(1, Math.max(0, FLAG_OFFSET_M / BERM_WIDTH_M))
-        sprite.position.set(
-          projection.centerX + sign * (halfRoad + FLAG_OFFSET_M) * px,
-          projection.y(camZ) - rise * px,
-        )
-        sprite.zIndex = -camZ
+          const texture = textures[(row * 2 + side) % textures.length]
+          if (texture !== undefined) sprite.texture = texture
+          const px = projection.scale(camZ)
+          const size = (FLAG_HEIGHT_M * px) / sprite.texture.height
+          const fade = Math.min(1, Math.max(0, (FLAG_DISTANCE_M - camZ) / FLAG_FADE_M))
+          const sign = side === 0 ? -1 : 1
+          sprite.alpha = fade * fade * (3 - 2 * fade)
+          sprite.scale.set(sign > 0 ? -size : size, size)
+          const rise = BERM_HEIGHT_M * Math.min(1, Math.max(0, FLAG_OFFSET_M / BERM_WIDTH_M))
+          sprite.position.set(
+            projection.centerX + sign * (halfRoad + FLAG_OFFSET_M) * px,
+            projection.y(camZ) - rise * px,
+          )
+          sprite.zIndex = -camZ
+        }
       }
     }
 
@@ -528,7 +527,7 @@ export class Lane {
     }
   }
 
-  /** Баннеры вдоль кромки: плоскость параллельна дороге, сходится к горизонту. */
+  /** Баннеры вдоль кромки — только первые BANNER_UNTIL_M метров заезда. */
   #drawBanners(): void {
     const textures = this.#bannerTextures
     if (textures.length === 0) {
@@ -538,41 +537,41 @@ export class Lane {
 
     const projection = this.#projection
     const traveled = this.#traveled * this.#visualScale
+    const untilZ = BANNER_UNTIL_M * this.#visualScale
     const xM = ROAD_WIDTH_M / 2 + BANNER_OFFSET_M
     const rise = BERM_HEIGHT_M * Math.min(1, Math.max(0, BANNER_OFFSET_M / BERM_WIDTH_M))
     const panelBot = rise + BANNER_LEG_M
-    const panelTop = panelBot + BANNER_HEIGHT_M
+    const posterBot = panelBot + BANNER_TUBE_M + BANNER_GAP_M
+    const posterTop = posterBot + BANNER_HEIGHT_M
+    const panelTop = posterTop + BANNER_GAP_M + BANNER_TUBE_M
     let used = 0
 
     for (let side = 0; side < 2; side++) {
       const sign = side === 0 ? -1 : 1
       const phase = side === 0 ? BANNER_PHASE_LEFT : BANNER_PHASE_RIGHT
-      const baseIndex = Math.floor((traveled - phase) / BANNER_PERIOD_M)
       const wallX = sign * xM
+      const baseIndex = Math.floor((traveled - phase) / BANNER_PERIOD_M)
 
       for (let slot = 0; slot < BANNER_SLOTS_PER_SIDE; slot++) {
         const bannerIndex = baseIndex + slot
         const worldZ = bannerIndex * BANNER_PERIOD_M + phase
+        if (worldZ < 0 || worldZ >= untilZ) continue
         const z0 = worldZ - traveled
         const z1 = z0 + BANNER_WIDTH_M
+        const nearZ = Math.max(z0, projection.nearZ)
+        const farZ = Math.min(z1, BANNER_DISTANCE_M)
+        if (farZ - nearZ <= 0.08) continue
+
         const banner = this.#bannerPool[used]
         if (banner === undefined) return
         used += 1
 
-        const nearZ = Math.max(z0, projection.nearZ)
-        const farZ = Math.min(z1, BANNER_DISTANCE_M)
-        const visible = farZ - nearZ > 0.08
-        banner.group.visible = visible
-        if (!visible) {
-          banner.group.alpha = 0
-          continue
-        }
-
         const texture = textures[bannerKind(bannerIndex, side, textures.length)]
         if (texture !== undefined) banner.poster.texture = texture
         const fade = Math.min(1, Math.max(0, (BANNER_DISTANCE_M - nearZ) / BANNER_FADE_M))
+        banner.group.visible = true
         banner.group.alpha = fade * fade * (3 - 2 * fade)
-        setBannerPoster(banner.poster, projection, wallX, panelBot, panelTop, nearZ, farZ, sign)
+        setBannerPoster(banner.poster, projection, wallX, posterBot, posterTop, nearZ, farZ, sign)
         paintBannerFence(banner.fence, projection, wallX, rise, panelBot, panelTop, nearZ, farZ)
         banner.group.zIndex = -nearZ + 0.1
       }

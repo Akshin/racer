@@ -5,7 +5,7 @@
  */
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { RACE_DISTANCES_M, SPEED_SCALE_MAX, SPEED_SCALE_MIN, SPEED_SCALE_STEP } from '@/game/config'
+import { SPEED_SCALE_MAX, SPEED_SCALE_MIN, SPEED_SCALE_STEP } from '@/game/config'
 import { useSessionStore } from '@/stores/session'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -32,11 +32,6 @@ const visibleLogs = computed(() =>
 
 function time(at: number): string {
   return new Date(at).toLocaleTimeString('ru-RU')
-}
-
-function distanceLabel(meters: number): string {
-  const km = meters / 1000
-  return km < 1 ? `${km} км` : `${km.toFixed(0)} км`
 }
 </script>
 
@@ -120,17 +115,6 @@ function distanceLabel(meters: number): string {
         />
         <span class="muted">{{ SPEED_SCALE_MIN }}× … {{ SPEED_SCALE_MAX }}×</span>
       </label>
-      <div class="distances" role="group" aria-label="Длина заезда">
-        <button
-          v-for="meters in RACE_DISTANCES_M"
-          :key="meters"
-          type="button"
-          :class="{ primary: settings.raceDistanceM === meters }"
-          @click="settings.raceDistanceM = meters"
-        >
-          {{ distanceLabel(meters) }}
-        </button>
-      </div>
     </section>
 
     <section class="card">
@@ -273,12 +257,6 @@ header {
     background: transparent;
     border: none;
   }
-}
-
-.distances {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
 }
 
 .wide {
