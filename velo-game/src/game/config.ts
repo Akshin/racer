@@ -74,8 +74,11 @@ export const COLOR_GROUND = 0x4a7a3a
 export const COLOR_BERM_LIT = 0x456834
 export const COLOR_BERM = 0x3a5c30
 export const COLOR_BERM_SHADE = 0x32502c
-export const COLOR_ASPHALT = 0x6e747b
-export const COLOR_MARKING = 0xf2f2ee
+export const COLOR_ASPHALT = 0x5c524e
+/** Асфальт у горизонта: алый отсвет закатного солнца. */
+export const COLOR_ASPHALT_SUN = 0x7a554c
+/** Разметка: не холодный белый, а кремово-персиковый в том же свете. */
+export const COLOR_MARKING = 0xf0d4c0
 export const COLOR_DIVIDER = 0x0d1117
 
 /** Видимый диск — доля ширины половины, как на рефе (~20–25%). */

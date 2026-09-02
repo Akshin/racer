@@ -22,6 +22,7 @@ import {
   BERM_HEIGHT_M,
   BERM_WIDTH_M,
   COLOR_ASPHALT,
+  COLOR_ASPHALT_SUN,
   COLOR_BERM,
   COLOR_BERM_LIT,
   COLOR_BERM_SHADE,
@@ -318,7 +319,16 @@ export class Lane {
     this.#road
       .clear()
       .poly(roadQuad(projection, -halfRoad, halfRoad, projection.nearZ, ROAD_DISTANCE_M))
-      .fill(COLOR_ASPHALT)
+      .fill(
+        new FillGradient({
+          start: { x: 0.5, y: 0 },
+          end: { x: 0.5, y: 1 },
+          colorStops: [
+            { offset: 0, color: COLOR_ASPHALT_SUN },
+            { offset: 1, color: COLOR_ASPHALT },
+          ],
+        }),
+      )
 
     for (const side of [-1, 1]) {
       const center = side * edgeCenter
@@ -355,14 +365,12 @@ export class Lane {
     for (let side = 0; side < 2; side++) {
       const sign = side === 0 ? -1 : 1
       const phase = side === 0 ? TREE_PHASE_LEFT : TREE_PHASE_RIGHT
-      const first =
-        Math.floor((traveled + projection.nearZ - phase) / TREE_PERIOD_M) * TREE_PERIOD_M +
-        phase +
-        TREE_PERIOD_M * 0.5
+      const baseIndex = Math.floor((traveled + projection.nearZ - phase) / TREE_PERIOD_M)
 
       for (let slot = 0; slot < TREE_SLOTS_PER_SIDE; slot++) {
-        const slotZ = first + slot * TREE_PERIOD_M
-        const worldZ = slotZ + (hash01(slotZ * 0.19 + side) * 2 - 1) * 1.1
+        const treeIndex = baseIndex + slot
+        const slotZ = treeIndex * TREE_PERIOD_M + phase + TREE_PERIOD_M * 0.5
+        const worldZ = slotZ + (hash01(treeIndex * 19.1 + side) * 2 - 1) * 1.1
         const camZ = worldZ - traveled
         const sprite = this.#treePool[used]
         if (sprite === undefined) return
@@ -375,13 +383,13 @@ export class Lane {
           continue
         }
 
-        const texture = textures[treeKind(worldZ, side, textures.length)]
+        const texture = textures[treeKind(treeIndex, side, textures.length)]
         if (texture !== undefined) sprite.texture = texture
         const px = projection.scale(camZ)
-        const heightVary = 0.78 + 0.44 * hash01(worldZ * 0.37 + side)
+        const heightVary = 0.78 + 0.44 * hash01(treeIndex * 37.3 + side)
         const size = (TREE_HEIGHT_M * heightVary * px) / sprite.texture.height
         const offset =
-          TREE_OFFSET_M + TREE_OFFSET_SPREAD_M * (hash01(worldZ * 0.71 + side * 4.3) * 2 - 1)
+          TREE_OFFSET_M + TREE_OFFSET_SPREAD_M * (hash01(treeIndex * 71.9 + side * 4.3) * 2 - 1)
         const fade = Math.min(1, Math.max(0, (TREE_DISTANCE_M - camZ) / TREE_FADE_M))
         sprite.alpha = fade * fade * (3 - 2 * fade)
         sprite.scale.set(sign > 0 ? -size : size, size)
@@ -457,6 +465,6 @@ function hash01(seed: number): number {
   return n - Math.floor(n)
 }
 
-function treeKind(worldZ: number, side: number, count: number): number {
-  return Math.floor(hash01(worldZ * 0.13 + side * 17.2) * count) % count
+function treeKind(index: number, side: number, count: number): number {
+  return Math.floor(hash01(index * 13.7 + side * 17.2) * count) % count
 }
