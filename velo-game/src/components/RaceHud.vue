@@ -21,12 +21,23 @@ const props = defineProps<LaneHud>()
 
 const names = ['Игрок 1', 'Игрок 2'] as const
 
-function polar(cx: number, cy: number, radius: number, degFrom12: number): { x: number; y: number } {
+function polar(
+  cx: number,
+  cy: number,
+  radius: number,
+  degFrom12: number,
+): { x: number; y: number } {
   const rad = (degFrom12 * Math.PI) / 180
   return { x: cx + radius * Math.sin(rad), y: cy - radius * Math.cos(rad) }
 }
 
-function arcPath(cx: number, cy: number, radius: number, startDeg: number, sweepDeg: number): string {
+function arcPath(
+  cx: number,
+  cy: number,
+  radius: number,
+  startDeg: number,
+  sweepDeg: number,
+): string {
   const start = polar(cx, cy, radius, startDeg)
   const end = polar(cx, cy, radius, startDeg + sweepDeg)
   const large = sweepDeg > 180 ? 1 : 0
@@ -60,7 +71,9 @@ const rows = computed(() => [
 
 const cadence = computed(() => Math.min(Math.max(props.telemetry.cadence, 0), CADENCE_MAX))
 
-const mainNeedleDeg = computed(() => DIAL_START_DEG + (cadence.value / CADENCE_MAX) * DIAL_SWEEP_DEG)
+const mainNeedleDeg = computed(
+  () => DIAL_START_DEG + (cadence.value / CADENCE_MAX) * DIAL_SWEEP_DEG,
+)
 
 const smallNeedleDeg = computed(
   () => SMALL_START_DEG + (Math.min(cadence.value / 8, SMALL_MAX) / SMALL_MAX) * SMALL_SWEEP_DEG,
@@ -211,6 +224,7 @@ const smallTicks = Array.from({ length: 11 }, (_, value) => {
   background: rgb(0 0 0 / 75%);
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 8px;
+  opacity: 0.8;
 
   &__row {
     display: flex;
@@ -268,6 +282,7 @@ const smallTicks = Array.from({ length: 11 }, (_, value) => {
   background: rgb(0 0 0 / 75%);
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 10px;
+  opacity: 0.8;
 }
 
 .dials__small {

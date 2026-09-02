@@ -37,13 +37,22 @@ export const DASH_DISTANCE_M = 150
 export const MAX_DASHES = Math.ceil(DASH_DISTANCE_M / DASH_PERIOD_M) + 1
 
 /**
+ * Обочина-клин: от кромки асфальта растёт вверх и в сторону.
+ * В перспективе сам сходится к горизонту.
+ */
+export const BERM_WIDTH_M = 3.8
+export const BERM_HEIGHT_M = 4.3
+
+/**
  * Деревья вдоль обочины: билборды в той же проекции, что дорога.
  * Свет в PNG справа — слева от дороги как есть, справа зеркалим.
  */
 export const TREE_HEIGHT_M = 8
-export const TREE_OFFSET_M = 2.2
+export const TREE_OFFSET_M = 0.85
 /** Разброс влево-вправо от линии посадки, метры. */
-export const TREE_OFFSET_SPREAD_M = 0.95
+export const TREE_OFFSET_SPREAD_M = 0.3
+/** На сколько метров ствол уходит в склон — иначе дерево стоит на поверхности. */
+export const TREE_SINK_M = 0.45
 export const TREE_PERIOD_M = 5.6
 export const TREE_PHASE_LEFT = 1
 export const TREE_PHASE_RIGHT = 8
@@ -61,6 +70,10 @@ export const COLOR_SKY_TOP = 0x7a7b8e
 export const COLOR_SKY_MID = 0xcbb6b4
 export const COLOR_SKY_HORIZON = 0xf0d6c2
 export const COLOR_GROUND = 0x4a7a3a
+/** Обочина: свет у дороги (к солнцу), тень на гребне. */
+export const COLOR_BERM_LIT = 0x456834
+export const COLOR_BERM = 0x3a5c30
+export const COLOR_BERM_SHADE = 0x32502c
 export const COLOR_ASPHALT = 0x6e747b
 export const COLOR_MARKING = 0xf2f2ee
 export const COLOR_DIVIDER = 0x0d1117

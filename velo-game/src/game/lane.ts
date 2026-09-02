@@ -1,9 +1,9 @@
 /**
  * Половина сплитскрина: дорога одного велосипедиста.
  *
- * Неподвижное (небо, солнце, горы, земля, асфальт, сплошные линии) рисуется
- * один раз на изменение размера. Двигаются пунктир и деревья: меш и пул
- * спрайтов, потому что у Graphics пересборка геометрии каждый кадр стоит
+ * Неподвижное (небо, солнце, горы, земля, обочина, асфальт, сплошные линии)
+ * рисуется один раз на изменение размера. Двигаются пунктир и деревья: меш и
+ * пул спрайтов, потому что у Graphics пересборка геометрии каждый кадр стоит
  * дорого, а у меша обновление вершин — это перезапись небольшого массива.
  */
 
@@ -19,7 +19,12 @@ import {
 } from 'pixi.js'
 import { raceSheetTextures, raceSprite } from './assets'
 import {
+  BERM_HEIGHT_M,
+  BERM_WIDTH_M,
   COLOR_ASPHALT,
+  COLOR_BERM,
+  COLOR_BERM_LIT,
+  COLOR_BERM_SHADE,
   COLOR_GROUND,
   COLOR_MARKING,
   COLOR_SKY_HORIZON,
@@ -56,9 +61,10 @@ import {
   TREE_PERIOD_M,
   TREE_PHASE_LEFT,
   TREE_PHASE_RIGHT,
+  TREE_SINK_M,
   TREE_SLOTS_PER_SIDE,
 } from './config'
-import { createProjection, roadQuad } from './projection'
+import { createProjection, roadQuad, slopeQuad } from './projection'
 
 const COORDS_PER_QUAD = 8
 const KMH_TO_MS = 1 / 3.6
@@ -72,6 +78,7 @@ export class Lane {
   #sun: Sprite | null
   #mountains: Sprite | null
   #ground = new Graphics()
+  #berm = new Graphics()
   #road = new Graphics()
   #trees = new Container({ sortableChildren: true })
   #treePool: Sprite[] = []
@@ -132,7 +139,7 @@ export class Lane {
     }
     this.view.addChild(this.#ground)
     if (this.#mountains !== null) this.view.addChild(this.#mountains)
-    this.view.addChild(this.#road, this.#dashes, this.#trees, this.#offline, this.#mask)
+    this.view.addChild(this.#berm, this.#road, this.#dashes, this.#trees, this.#offline, this.#mask)
     // У нижнего края дорога шире половины экрана — без маски она залезала бы к соседу.
     this.view.mask = this.#mask
   }
@@ -144,6 +151,7 @@ export class Lane {
     this.#drawSky()
     this.#layoutHorizon()
     this.#drawGround()
+    this.#drawBerms()
     this.#drawRoad()
     this.#layoutOffline()
     this.#drawTrees()
@@ -196,6 +204,36 @@ export class Lane {
       .clear()
       .rect(0, horizonY, width, height - horizonY)
       .fill(COLOR_GROUND)
+  }
+
+  /** Клин обочины: свет у асфальта, тень на гребне. Полосы по склону, не FillGradient — у него AABB уезжает за экран. */
+  #drawBerms(): void {
+    const projection = this.#projection
+    const halfRoad = ROAD_WIDTH_M / 2
+    const bands = [
+      { t: 1, color: COLOR_BERM_SHADE },
+      { t: 0.62, color: COLOR_BERM },
+      { t: 0.28, color: COLOR_BERM_LIT },
+    ]
+
+    this.#berm.clear()
+    for (const sign of [-1, 1]) {
+      for (const { t, color } of bands) {
+        this.#berm
+          .poly(
+            slopeQuad(
+              projection,
+              sign * halfRoad,
+              sign * (halfRoad + BERM_WIDTH_M * t),
+              0,
+              BERM_HEIGHT_M * t,
+              projection.nearZ,
+              ROAD_DISTANCE_M,
+            ),
+          )
+          .fill(color)
+      }
+    }
   }
 
   /** Солнце над хребтом, оба на дальнем фоне — не едут с дорогой. */
@@ -347,9 +385,10 @@ export class Lane {
         const fade = Math.min(1, Math.max(0, (TREE_DISTANCE_M - camZ) / TREE_FADE_M))
         sprite.alpha = fade * fade * (3 - 2 * fade)
         sprite.scale.set(sign > 0 ? -size : size, size)
+        const rise = BERM_HEIGHT_M * Math.min(1, Math.max(0, offset / BERM_WIDTH_M))
         sprite.position.set(
           projection.centerX + sign * (halfRoad + offset) * px,
-          projection.y(camZ),
+          projection.y(camZ) - (rise - TREE_SINK_M) * px,
         )
         sprite.zIndex = -camZ
       }

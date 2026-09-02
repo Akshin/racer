@@ -55,3 +55,34 @@ export function roadQuad(
     nearY,
   ]
 }
+
+/**
+ * Склон обочины: внутреннее ребро на земле у кромки дороги, внешнее — выше
+ * и дальше. Обе кромки — прямые в vanishing point, поэтому хватает одного квада.
+ */
+export function slopeQuad(
+  projection: Projection,
+  innerM: number,
+  outerM: number,
+  innerHeightM: number,
+  outerHeightM: number,
+  nearZ: number,
+  farZ: number,
+): number[] {
+  const { centerX } = projection
+  const nearScale = projection.scale(nearZ)
+  const farScale = projection.scale(farZ)
+  const nearY = projection.y(nearZ)
+  const farY = projection.y(farZ)
+
+  return [
+    centerX + innerM * farScale,
+    farY - innerHeightM * farScale,
+    centerX + outerM * farScale,
+    farY - outerHeightM * farScale,
+    centerX + outerM * nearScale,
+    nearY - outerHeightM * nearScale,
+    centerX + innerM * nearScale,
+    nearY - innerHeightM * nearScale,
+  ]
+}
