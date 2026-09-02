@@ -37,18 +37,20 @@ export const DASH_DISTANCE_M = 150
 export const MAX_DASHES = Math.ceil(DASH_DISTANCE_M / DASH_PERIOD_M) + 1
 
 /**
- * Обочина: отдельные кочки-полусферы. Каждая тесселлируется сама,
- * иначе на всю дорогу не хватает колец и они выглядят клиньями.
+ * Деревья вдоль обочины: билборды в той же проекции, что дорога.
+ * Свет в PNG справа — слева от дороги как есть, справа зеркалим.
  */
-export const BERM_WIDTH_M = 4.4
-export const BERM_HEIGHT_M = 1.1
-export const BERM_PERIOD_M = 16
-export const BERM_RADIUS_M = 16.9
-export const BERM_PHASE_LEFT = 0
-export const BERM_PHASE_RIGHT = 8
-export const BERM_DISTANCE_M = 110
-export const BERM_MOUNDS_PER_SIDE = 13
-export const BERM_RINGS_PER_MOUND = 11
+export const TREE_HEIGHT_M = 8
+export const TREE_OFFSET_M = 2.2
+/** Разброс влево-вправо от линии посадки, метры. */
+export const TREE_OFFSET_SPREAD_M = 0.95
+export const TREE_PERIOD_M = 5.6
+export const TREE_PHASE_LEFT = 1
+export const TREE_PHASE_RIGHT = 8
+export const TREE_DISTANCE_M = 110
+/** За сколько метров до горизонта дерево проявляется из тумана. */
+export const TREE_FADE_M = 16
+export const TREE_SLOTS_PER_SIDE = 24
 
 /** Постоянная времени разгона/остановки дороги. При потере датчика она замирает за ~2τ. */
 export const SPEED_TAU_MS = 400
@@ -59,7 +61,6 @@ export const COLOR_SKY_TOP = 0x7a7b8e
 export const COLOR_SKY_MID = 0xcbb6b4
 export const COLOR_SKY_HORIZON = 0xf0d6c2
 export const COLOR_GROUND = 0x4a7a3a
-export const COLOR_BERM = 0x426d34
 export const COLOR_ASPHALT = 0x6e747b
 export const COLOR_MARKING = 0xf2f2ee
 export const COLOR_DIVIDER = 0x0d1117

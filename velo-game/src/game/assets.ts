@@ -3,7 +3,7 @@
  * Пока манифеста нет — сцена рисуется как раньше, без спрайтов.
  */
 
-import { Assets, Sprite, Texture } from 'pixi.js'
+import { Assets, Sprite, Spritesheet, Texture } from 'pixi.js'
 
 let started = false
 
@@ -35,4 +35,20 @@ export function raceSprite(alias: string): Sprite | null {
   }
   if (texture == null || texture === Texture.EMPTY || texture.width === 0) return null
   return new Sprite({ texture })
+}
+
+/** Кадры атласа `trees` по имени, пустой массив если атласа нет. */
+export function raceSheetTextures(alias: string): Texture[] {
+  let sheet: Spritesheet | undefined
+  try {
+    sheet = Assets.get<Spritesheet>(alias)
+  } catch {
+    return []
+  }
+  if (sheet?.textures == null) return []
+  const frames = sheet.textures
+  return Object.keys(frames)
+    .sort()
+    .map((name) => frames[name])
+    .filter((texture): texture is Texture => texture != null && texture.width > 0)
 }

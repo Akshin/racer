@@ -2,9 +2,9 @@
  * Половина сплитскрина: дорога одного велосипедиста.
  *
  * Неподвижное (небо, солнце, горы, земля, асфальт, сплошные линии) рисуется
- * один раз на изменение размера. Двигаются пунктир и кочки обочины: оба меши,
- * потому что у Graphics пересборка геометрии каждый кадр стоит дорого, а у меша
- * обновление вершин — это перезапись небольшого массива.
+ * один раз на изменение размера. Двигаются пунктир и деревья: меш и пул
+ * спрайтов, потому что у Graphics пересборка геометрии каждый кадр стоит
+ * дорого, а у меша обновление вершин — это перезапись небольшого массива.
  */
 
 import {
@@ -17,19 +17,9 @@ import {
   Text,
   Texture,
 } from 'pixi.js'
-import { raceSprite } from './assets'
+import { raceSheetTextures, raceSprite } from './assets'
 import {
-  BERM_DISTANCE_M,
-  BERM_HEIGHT_M,
-  BERM_MOUNDS_PER_SIDE,
-  BERM_PERIOD_M,
-  BERM_PHASE_LEFT,
-  BERM_PHASE_RIGHT,
-  BERM_RADIUS_M,
-  BERM_RINGS_PER_MOUND,
-  BERM_WIDTH_M,
   COLOR_ASPHALT,
-  COLOR_BERM,
   COLOR_GROUND,
   COLOR_MARKING,
   COLOR_SKY_HORIZON,
@@ -58,13 +48,20 @@ import {
   SUN_PEAK_GAP_RATIO,
   SUN_TOP_MARGIN_RATIO,
   SUN_WIDTH_RATIO,
+  TREE_DISTANCE_M,
+  TREE_FADE_M,
+  TREE_HEIGHT_M,
+  TREE_OFFSET_M,
+  TREE_OFFSET_SPREAD_M,
+  TREE_PERIOD_M,
+  TREE_PHASE_LEFT,
+  TREE_PHASE_RIGHT,
+  TREE_SLOTS_PER_SIDE,
 } from './config'
 import { createProjection, roadQuad } from './projection'
 
 const COORDS_PER_QUAD = 8
 const KMH_TO_MS = 1 / 3.6
-const BERM_ARC_POINTS = 8
-const BERM_VERT_COUNT = 2 * BERM_MOUNDS_PER_SIDE * BERM_RINGS_PER_MOUND * BERM_ARC_POINTS
 
 export class Lane {
   readonly view = new Container()
@@ -76,7 +73,9 @@ export class Lane {
   #mountains: Sprite | null
   #ground = new Graphics()
   #road = new Graphics()
-  #berm: MeshSimple
+  #trees = new Container({ sortableChildren: true })
+  #treePool: Sprite[] = []
+  #treeTextures: Texture[] = []
   #dashes: MeshSimple
   #mask = new Graphics()
   #offline = new Container()
@@ -85,18 +84,27 @@ export class Lane {
 
   /** Сглаженная скорость, км/ч. */
   #speed = 0
-  /** Пройденный путь в метрах — по нему считается фаза пунктира и холмиков. */
+  /** Пройденный путь в метрах — по нему считается фаза пунктира и деревьев. */
   #traveled = 0
   /** Множитель визуальной скорости: меняется со страницы проверки без перезапуска. */
   #visualScale = 1
 
-  /** Собирает слои половины экрана: фон, обочина, дорога, пунктир, плашку, маску. */
+  /** Собирает слои половины экрана: фон, дорога, деревья, плашку, маску. */
   constructor() {
-    this.#berm = createBermMesh(COLOR_BERM)
     this.#sun = raceSprite('sun')
     this.#mountains = raceSprite('mountains')
     if (this.#sun) this.#sun.anchor.set(0.5, 0.5)
     if (this.#mountains) this.#mountains.anchor.set(0.5, MOUNTAINS_ANCHOR_Y)
+
+    this.#treeTextures = raceSheetTextures('trees')
+    const treeCount = TREE_SLOTS_PER_SIDE * 2
+    for (let i = 0; i < treeCount; i++) {
+      const sprite = new Sprite({ texture: this.#treeTextures[0] ?? Texture.EMPTY })
+      sprite.anchor.set(0.5, 1)
+      sprite.visible = false
+      this.#treePool.push(sprite)
+      this.#trees.addChild(sprite)
+    }
 
     const vertices = new Float32Array(MAX_DASHES * COORDS_PER_QUAD)
     const indices = new Uint32Array(MAX_DASHES * 6)
@@ -124,7 +132,7 @@ export class Lane {
     }
     this.view.addChild(this.#ground)
     if (this.#mountains !== null) this.view.addChild(this.#mountains)
-    this.view.addChild(this.#berm, this.#road, this.#dashes, this.#offline, this.#mask)
+    this.view.addChild(this.#road, this.#dashes, this.#trees, this.#offline, this.#mask)
     // У нижнего края дорога шире половины экрана — без маски она залезала бы к соседу.
     this.view.mask = this.#mask
   }
@@ -138,7 +146,7 @@ export class Lane {
     this.#drawGround()
     this.#drawRoad()
     this.#layoutOffline()
-    this.#drawBerms()
+    this.#drawTrees()
     this.#drawDashes()
   }
 
@@ -161,7 +169,7 @@ export class Lane {
 
     this.#offline.visible = !telemetry.connected
     this.#visualScale = visualScale
-    this.#drawBerms()
+    this.#drawTrees()
     this.#drawDashes()
   }
 
@@ -262,7 +270,7 @@ export class Lane {
     this.#sunGlow.clear().circle(0, 0, glowR).fill(outer).circle(0, 0, coreR).fill(core)
   }
 
-  /** Асфальт и сплошные белые линии по краям — поверх бруствера, чтобы кромка была чистой. */
+  /** Асфальт и сплошные белые линии по краям. */
   #drawRoad(): void {
     const projection = this.#projection
     const halfRoad = ROAD_WIDTH_M / 2
@@ -291,56 +299,66 @@ export class Lane {
   }
 
   /**
-   * Кочки у обочины: каждая — своя полусфера с собственной сеткой,
-   * чтобы ближние не превращались в клинья из трёх полигонов.
+   * Деревья на обочине: билбордом в перспективе.
+   * Справа зеркалим — в PNG свет запечён справа, у обочины он должен смотреть к солнцу.
    */
-  #drawBerms(): void {
+  #drawTrees(): void {
+    const textures = this.#treeTextures
+    if (textures.length === 0) {
+      for (const sprite of this.#treePool) sprite.visible = false
+      return
+    }
+
     const projection = this.#projection
     const traveled = this.#traveled * this.#visualScale
     const halfRoad = ROAD_WIDTH_M / 2
-    const vertices = this.#berm.vertices as Float32Array
-    const rx = BERM_WIDTH_M * 0.5
+    let used = 0
 
     for (let side = 0; side < 2; side++) {
       const sign = side === 0 ? -1 : 1
-      const phase = side === 0 ? BERM_PHASE_LEFT : BERM_PHASE_RIGHT
+      const phase = side === 0 ? TREE_PHASE_LEFT : TREE_PHASE_RIGHT
       const first =
-        Math.floor((traveled + projection.nearZ - phase) / BERM_PERIOD_M) * BERM_PERIOD_M +
+        Math.floor((traveled + projection.nearZ - phase) / TREE_PERIOD_M) * TREE_PERIOD_M +
         phase +
-        BERM_PERIOD_M * 0.5
+        TREE_PERIOD_M * 0.5
 
-      for (let slot = 0; slot < BERM_MOUNDS_PER_SIDE; slot++) {
-        const worldZ = first + slot * BERM_PERIOD_M
+      for (let slot = 0; slot < TREE_SLOTS_PER_SIDE; slot++) {
+        const slotZ = first + slot * TREE_PERIOD_M
+        const worldZ = slotZ + (hash01(slotZ * 0.19 + side) * 2 - 1) * 1.1
         const camZ = worldZ - traveled
-        const vary = 0.78 + 0.22 * (0.5 + 0.5 * Math.sin(worldZ * 0.11 + phase))
-        const visible = camZ > projection.nearZ && camZ < BERM_DISTANCE_M
+        const sprite = this.#treePool[used]
+        if (sprite === undefined) return
+        used += 1
 
-        for (let ring = 0; ring < BERM_RINGS_PER_MOUND; ring++) {
-          const dz = ((ring / (BERM_RINGS_PER_MOUND - 1)) * 2 - 1) * BERM_RADIUS_M
-          const z = visible ? camZ + dz : projection.nearZ
-          const scale = projection.scale(Math.max(z, projection.nearZ))
-          const groundY = projection.y(Math.max(z, projection.nearZ))
-          const ringBase =
-            ((side * BERM_MOUNDS_PER_SIDE + slot) * BERM_RINGS_PER_MOUND + ring) *
-            BERM_ARC_POINTS *
-            2
-
-          for (let point = 0; point < BERM_ARC_POINTS; point++) {
-            const t = point / (BERM_ARC_POINTS - 1)
-            const xFromRoad = BERM_WIDTH_M * t
-            const dx = xFromRoad - rx
-            const e = (dx / rx) * (dx / rx) + (dz / BERM_RADIUS_M) * (dz / BERM_RADIUS_M)
-            const height = visible && e < 1 ? BERM_HEIGHT_M * Math.sqrt(1 - e) * vary : 0
-            const pair = ringBase + point * 2
-            vertices[pair] =
-              projection.centerX + sign * (halfRoad + (height > 0 ? xFromRoad : 0)) * scale
-            vertices[pair + 1] = groundY - height * scale
-          }
+        const visible = camZ > projection.nearZ && camZ < TREE_DISTANCE_M
+        sprite.visible = visible
+        if (!visible) {
+          sprite.alpha = 0
+          continue
         }
+
+        const texture = textures[treeKind(worldZ, side, textures.length)]
+        if (texture !== undefined) sprite.texture = texture
+        const px = projection.scale(camZ)
+        const heightVary = 0.78 + 0.44 * hash01(worldZ * 0.37 + side)
+        const size = (TREE_HEIGHT_M * heightVary * px) / sprite.texture.height
+        const offset =
+          TREE_OFFSET_M + TREE_OFFSET_SPREAD_M * (hash01(worldZ * 0.71 + side * 4.3) * 2 - 1)
+        const fade = Math.min(1, Math.max(0, (TREE_DISTANCE_M - camZ) / TREE_FADE_M))
+        sprite.alpha = fade * fade * (3 - 2 * fade)
+        sprite.scale.set(sign > 0 ? -size : size, size)
+        sprite.position.set(
+          projection.centerX + sign * (halfRoad + offset) * px,
+          projection.y(camZ),
+        )
+        sprite.zIndex = -camZ
       }
     }
 
-    this.#berm.vertices = vertices
+    for (let i = used; i < this.#treePool.length; i++) {
+      const extra = this.#treePool[i]
+      if (extra !== undefined) extra.visible = false
+    }
   }
 
   /** Сдвигает штрихи центрального пунктира вперёд — от #traveled и visualScale. */
@@ -395,32 +413,11 @@ export class Lane {
   }
 }
 
-function createBermMesh(tint: number): MeshSimple {
-  const vertices = new Float32Array(BERM_VERT_COUNT * 2)
-  const uvs = new Float32Array(BERM_VERT_COUNT * 2)
-  const quads = 2 * BERM_MOUNDS_PER_SIDE * (BERM_RINGS_PER_MOUND - 1) * (BERM_ARC_POINTS - 1)
-  const indices = new Uint32Array(quads * 6)
+function hash01(seed: number): number {
+  const n = Math.sin(seed * 12.9898) * 43758.5453
+  return n - Math.floor(n)
+}
 
-  let offset = 0
-  for (let side = 0; side < 2; side++) {
-    for (let mound = 0; mound < BERM_MOUNDS_PER_SIDE; mound++) {
-      const moundBase =
-        (side * BERM_MOUNDS_PER_SIDE + mound) * BERM_RINGS_PER_MOUND * BERM_ARC_POINTS
-      for (let ring = 0; ring < BERM_RINGS_PER_MOUND - 1; ring++) {
-        const ringBase = moundBase + ring * BERM_ARC_POINTS
-        for (let edge = 0; edge < BERM_ARC_POINTS - 1; edge++) {
-          const a = ringBase + edge
-          const b = a + 1
-          const d = a + BERM_ARC_POINTS
-          const c = d + 1
-          indices.set([a, b, c, a, c, d], offset)
-          offset += 6
-        }
-      }
-    }
-  }
-
-  const mesh = new MeshSimple({ texture: Texture.WHITE, vertices, indices, uvs })
-  mesh.tint = tint
-  return mesh
+function treeKind(worldZ: number, side: number, count: number): number {
+  return Math.floor(hash01(worldZ * 0.13 + side * 17.2) * count) % count
 }
