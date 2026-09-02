@@ -2,7 +2,7 @@
  * Половина сплитскрина: дорога одного велосипедиста.
  *
  * Неподвижное (небо, солнце, горы, земля, обочина, асфальт, сплошные линии)
- * рисуется один раз на изменение размера. Двигаются пунктир, деревья и флаги: меш и
+ * рисуется один раз на изменение размера. Двигаются пунктир, деревья, флаги и баннеры: меш и
  * пул спрайтов, потому что у Graphics пересборка геометрии каждый кадр стоит
  * дорого, а у меша обновление вершин — это перезапись небольшого массива.
  */
@@ -13,12 +13,24 @@ import {
   FillGradient,
   Graphics,
   MeshSimple,
+  PerspectiveMesh,
   Sprite,
   Text,
   Texture,
 } from 'pixi.js'
 import { raceSheetTextures, raceSprite } from './assets'
 import {
+  BANNER_DISTANCE_M,
+  BANNER_FADE_M,
+  BANNER_HEIGHT_M,
+  BANNER_LEG_M,
+  BANNER_OFFSET_M,
+  BANNER_PERIOD_M,
+  BANNER_PHASE_LEFT,
+  BANNER_PHASE_RIGHT,
+  BANNER_SLOTS_PER_SIDE,
+  BANNER_TUBE_M,
+  BANNER_WIDTH_M,
   BERM_HEIGHT_M,
   BERM_WIDTH_M,
   COLOR_ASPHALT,
@@ -28,6 +40,8 @@ import {
   COLOR_BERM_SHADE,
   COLOR_GROUND,
   COLOR_MARKING,
+  COLOR_METAL,
+  COLOR_METAL_LIT,
   COLOR_SKY_HORIZON,
   COLOR_SKY_MID,
   COLOR_SKY_TOP,
@@ -74,7 +88,7 @@ import {
   TREE_SINK_M,
   TREE_SLOTS_PER_SIDE,
 } from './config'
-import { createProjection, roadQuad, slopeQuad } from './projection'
+import { createProjection, roadQuad, slopeQuad, wallCorners, wallQuad } from './projection'
 
 const COORDS_PER_QUAD = 8
 const KMH_TO_MS = 1 / 3.6
@@ -95,6 +109,8 @@ export class Lane {
   #treeTextures: Texture[] = []
   #flagPool: Sprite[] = []
   #flagTextures: Texture[] = []
+  #bannerPool: BannerProp[] = []
+  #bannerTextures: Texture[] = []
   #dashes: MeshSimple
   #mask = new Graphics()
   #offline = new Container()
@@ -136,6 +152,23 @@ export class Lane {
       sprite.visible = false
       this.#flagPool.push(sprite)
       this.#trees.addChild(sprite)
+    }
+
+    this.#bannerTextures = raceSheetTextures('banners')
+    const bannerCount = BANNER_SLOTS_PER_SIDE * 2
+    const bannerFallback = this.#bannerTextures[0] ?? Texture.EMPTY
+    for (let i = 0; i < bannerCount; i++) {
+      const poster = new PerspectiveMesh({
+        texture: bannerFallback,
+        verticesX: 12,
+        verticesY: 6,
+      })
+      const fence = new Graphics()
+      const group = new Container()
+      group.visible = false
+      group.addChild(poster, fence)
+      this.#bannerPool.push({ group, poster, fence })
+      this.#trees.addChild(group)
     }
 
     const vertices = new Float32Array(MAX_DASHES * COORDS_PER_QUAD)
@@ -181,6 +214,7 @@ export class Lane {
     this.#layoutOffline()
     this.#drawTrees()
     this.#drawFlags()
+    this.#drawBanners()
     this.#drawDashes()
   }
 
@@ -206,6 +240,7 @@ export class Lane {
     this.#raceDistanceM = raceDistanceM
     this.#drawTrees()
     this.#drawFlags()
+    this.#drawBanners()
     this.#drawDashes()
   }
 
@@ -493,6 +528,62 @@ export class Lane {
     }
   }
 
+  /** Баннеры вдоль кромки: плоскость параллельна дороге, сходится к горизонту. */
+  #drawBanners(): void {
+    const textures = this.#bannerTextures
+    if (textures.length === 0) {
+      for (const banner of this.#bannerPool) banner.group.visible = false
+      return
+    }
+
+    const projection = this.#projection
+    const traveled = this.#traveled * this.#visualScale
+    const xM = ROAD_WIDTH_M / 2 + BANNER_OFFSET_M
+    const rise = BERM_HEIGHT_M * Math.min(1, Math.max(0, BANNER_OFFSET_M / BERM_WIDTH_M))
+    const panelBot = rise + BANNER_LEG_M
+    const panelTop = panelBot + BANNER_HEIGHT_M
+    let used = 0
+
+    for (let side = 0; side < 2; side++) {
+      const sign = side === 0 ? -1 : 1
+      const phase = side === 0 ? BANNER_PHASE_LEFT : BANNER_PHASE_RIGHT
+      const baseIndex = Math.floor((traveled - phase) / BANNER_PERIOD_M)
+      const wallX = sign * xM
+
+      for (let slot = 0; slot < BANNER_SLOTS_PER_SIDE; slot++) {
+        const bannerIndex = baseIndex + slot
+        const worldZ = bannerIndex * BANNER_PERIOD_M + phase
+        const z0 = worldZ - traveled
+        const z1 = z0 + BANNER_WIDTH_M
+        const banner = this.#bannerPool[used]
+        if (banner === undefined) return
+        used += 1
+
+        const nearZ = Math.max(z0, projection.nearZ)
+        const farZ = Math.min(z1, BANNER_DISTANCE_M)
+        const visible = farZ - nearZ > 0.08
+        banner.group.visible = visible
+        if (!visible) {
+          banner.group.alpha = 0
+          continue
+        }
+
+        const texture = textures[bannerKind(bannerIndex, side, textures.length)]
+        if (texture !== undefined) banner.poster.texture = texture
+        const fade = Math.min(1, Math.max(0, (BANNER_DISTANCE_M - nearZ) / BANNER_FADE_M))
+        banner.group.alpha = fade * fade * (3 - 2 * fade)
+        setBannerPoster(banner.poster, projection, wallX, panelBot, panelTop, nearZ, farZ, sign)
+        paintBannerFence(banner.fence, projection, wallX, rise, panelBot, panelTop, nearZ, farZ)
+        banner.group.zIndex = -nearZ + 0.1
+      }
+    }
+
+    for (let i = used; i < this.#bannerPool.length; i++) {
+      const extra = this.#bannerPool[i]
+      if (extra !== undefined) extra.group.visible = false
+    }
+  }
+
   /** Сдвигает штрихи центрального пунктира вперёд — от #traveled и visualScale. */
   #drawDashes(): void {
     const projection = this.#projection
@@ -552,4 +643,57 @@ function hash01(seed: number): number {
 
 function treeKind(index: number, side: number, count: number): number {
   return Math.floor(hash01(index * 13.7 + side * 17.2) * count) % count
+}
+
+function bannerKind(index: number, side: number, count: number): number {
+  return Math.floor(hash01(index * 23.1 + side * 9.7) * count) % count
+}
+
+type BannerProp = {
+  group: Container
+  poster: PerspectiveMesh
+  fence: Graphics
+}
+
+function setBannerPoster(
+  mesh: PerspectiveMesh,
+  projection: Projection,
+  xM: number,
+  bottomM: number,
+  topM: number,
+  nearZ: number,
+  farZ: number,
+  sign: number,
+): void {
+  const c = wallCorners(projection, xM, bottomM, topM, nearZ, farZ)
+  // Слева логотип читается к горизонту; справа — с дороги, без зеркала.
+  if (sign < 0) {
+    mesh.setCorners(c.nearTop.x, c.nearTop.y, c.farTop.x, c.farTop.y, c.farBot.x, c.farBot.y, c.nearBot.x, c.nearBot.y)
+  } else {
+    mesh.setCorners(c.farTop.x, c.farTop.y, c.nearTop.x, c.nearTop.y, c.nearBot.x, c.nearBot.y, c.farBot.x, c.farBot.y)
+  }
+}
+
+function paintBannerFence(
+  g: Graphics,
+  projection: Projection,
+  xM: number,
+  rise: number,
+  panelBot: number,
+  panelTop: number,
+  nearZ: number,
+  farZ: number,
+): void {
+  const tube = BANNER_TUBE_M
+  const postFar = Math.min(farZ, nearZ + tube)
+  const postNearFar = Math.max(nearZ, farZ - tube)
+  g.clear()
+  g.poly(wallQuad(projection, xM, rise, panelBot, nearZ, postFar)).fill(COLOR_METAL)
+  g.poly(wallQuad(projection, xM, rise, panelBot, postNearFar, farZ)).fill(COLOR_METAL)
+  g.poly(wallQuad(projection, xM, panelBot, panelTop, nearZ, postFar)).fill(COLOR_METAL)
+  g.poly(wallQuad(projection, xM, panelBot, panelTop, postNearFar, farZ)).fill(COLOR_METAL)
+  g.poly(wallQuad(projection, xM, panelTop - tube, panelTop, nearZ, farZ)).fill(COLOR_METAL)
+  g.poly(wallQuad(projection, xM, panelBot, panelBot + tube, nearZ, farZ)).fill(COLOR_METAL)
+  const hi = tube * 0.28
+  g.poly(wallQuad(projection, xM, panelTop - tube + hi, panelTop - hi, nearZ, farZ)).fill(COLOR_METAL_LIT)
 }

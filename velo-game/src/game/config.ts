@@ -77,6 +77,24 @@ export const FLAG_START_Z_M = [10, 15, 20] as const
 export const FLAG_FINISH_GAPS_M = [10, 5, 0] as const
 export const FLAG_ROW_COUNT = FLAG_START_Z_M.length + FLAG_FINISH_GAPS_M.length + 1
 
+/**
+ * Баннеры — сплошной забор вдоль кромки, плоскость параллельна дороге.
+ * Длинная сторона постера идёт вдаль, не лицом в камеру.
+ */
+export const BANNER_WIDTH_M = 4.2
+export const BANNER_HEIGHT_M = 1.05
+export const BANNER_LEG_M = 0.12
+export const BANNER_TUBE_M = 0.07
+export const BANNER_OFFSET_M = 0.16
+export const BANNER_PERIOD_M = BANNER_WIDTH_M + BANNER_TUBE_M
+export const BANNER_PHASE_LEFT = 0.4
+export const BANNER_PHASE_RIGHT = 0.4
+export const BANNER_DISTANCE_M = 90
+export const BANNER_FADE_M = 14
+export const BANNER_SLOTS_PER_SIDE = Math.ceil(BANNER_DISTANCE_M / BANNER_PERIOD_M) + 2
+export const COLOR_METAL = 0x2a2e33
+export const COLOR_METAL_LIT = 0x4a5158
+
 /** Постоянная времени разгона/остановки дороги. При потере датчика она замирает за ~2τ. */
 export const SPEED_TAU_MS = 400
 /** Какую долю отставания от дистанции адаптера догоняем за кадр. */

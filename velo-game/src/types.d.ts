@@ -145,4 +145,11 @@ declare global {
     /** Сколько пикселей занимает метр ширины на расстоянии z. */
     scale: (z: number) => number
   }
+
+  type WallCorners = {
+    nearTop: { x: number; y: number }
+    nearBot: { x: number; y: number }
+    farTop: { x: number; y: number }
+    farBot: { x: number; y: number }
+  }
 }

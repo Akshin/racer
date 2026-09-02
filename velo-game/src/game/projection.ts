@@ -86,3 +86,60 @@ export function slopeQuad(
     nearY - innerHeightM * nearScale,
   ]
 }
+
+/**
+ * Вертикальная стена вдоль дороги: постоянный x, два z, низ и верх в метрах над асфальтом.
+ * Порядок: дальний верх, дальний низ, ближний низ, ближний верх.
+ */
+export function wallQuad(
+  projection: Projection,
+  xM: number,
+  bottomM: number,
+  topM: number,
+  nearZ: number,
+  farZ: number,
+): number[] {
+  const { centerX } = projection
+  const nearScale = projection.scale(nearZ)
+  const farScale = projection.scale(farZ)
+  const nearY = projection.y(nearZ)
+  const farY = projection.y(farZ)
+  const nearX = centerX + xM * nearScale
+  const farX = centerX + xM * farScale
+
+  return [
+    farX,
+    farY - topM * farScale,
+    farX,
+    farY - bottomM * farScale,
+    nearX,
+    nearY - bottomM * nearScale,
+    nearX,
+    nearY - topM * nearScale,
+  ]
+}
+
+/** Экранные углы той же стены — для PerspectiveMesh. */
+export function wallCorners(
+  projection: Projection,
+  xM: number,
+  bottomM: number,
+  topM: number,
+  nearZ: number,
+  farZ: number,
+): WallCorners {
+  const { centerX } = projection
+  const nearScale = projection.scale(nearZ)
+  const farScale = projection.scale(farZ)
+  const nearY = projection.y(nearZ)
+  const farY = projection.y(farZ)
+  const nearX = centerX + xM * nearScale
+  const farX = centerX + xM * farScale
+
+  return {
+    nearTop: { x: nearX, y: nearY - topM * nearScale },
+    nearBot: { x: nearX, y: nearY - bottomM * nearScale },
+    farTop: { x: farX, y: farY - topM * farScale },
+    farBot: { x: farX, y: farY - bottomM * farScale },
+  }
+}
