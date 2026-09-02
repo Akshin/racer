@@ -3,7 +3,7 @@
  * Пока манифеста нет — сцена рисуется как раньше, без спрайтов.
  */
 
-import { Assets } from 'pixi.js'
+import { Assets, Sprite, Texture } from 'pixi.js'
 
 let started = false
 
@@ -23,4 +23,16 @@ export async function loadRaceAssets(): Promise<void> {
       error,
     )
   }
+}
+
+/** Спрайт из бандла `race`, или null если ассета нет — сцена тогда без него. */
+export function raceSprite(alias: string): Sprite | null {
+  let texture: Texture | undefined
+  try {
+    texture = Assets.get<Texture>(alias)
+  } catch {
+    return null
+  }
+  if (texture == null || texture === Texture.EMPTY || texture.width === 0) return null
+  return new Sprite({ texture })
 }

@@ -6,6 +6,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import RaceHud from '@/components/RaceHud.vue'
 import { createGame } from '@/game'
+import { RACE_DURATION_MS } from '@/game/config'
 import { useSessionStore } from '@/stores/session'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -17,6 +18,14 @@ const settings = useSettingsStore()
 const host = useTemplateRef<HTMLDivElement>('host')
 
 const elapsedMs = ref(0)
+
+const remainingMs = computed(() => Math.max(0, RACE_DURATION_MS - elapsedMs.value))
+
+const timerLabel = computed(() => {
+  const seconds = Math.floor(remainingMs.value / 1000)
+  const minutes = Math.floor(seconds / 60)
+  return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+})
 
 const lanes = computed<LaneHud[]>(() =>
   session.playerChecks.map((check, index) => ({
@@ -31,13 +40,24 @@ let game: Game | null = null
 /** Инициализация асинхронная — компонент могли закрыть, не дождавшись её. */
 let closed = false
 let clock: number | undefined
+let finished = false
+
+/** Вызывается, когда минута истекла. Логику финиша добавим отдельно. */
+function finish(): void {}
 
 onMounted(async () => {
   // Вход на экран гонки — это старт заезда: обнуляем накопленную адаптером дистанцию.
   session.resetRace()
 
   const startedAt = Date.now()
-  clock = window.setInterval(() => (elapsedMs.value = Date.now() - startedAt), CLOCK_STEP_MS)
+  clock = window.setInterval(() => {
+    elapsedMs.value = Date.now() - startedAt
+    if (elapsedMs.value < RACE_DURATION_MS || finished) return
+    elapsedMs.value = RACE_DURATION_MS
+    finished = true
+    window.clearInterval(clock)
+    finish()
+  }, CLOCK_STEP_MS)
 
   if (host.value === null) return
 
@@ -66,6 +86,8 @@ onBeforeUnmount(() => {
     <div ref="host" class="stage__canvas"></div>
 
     <div class="stage__overlay">
+      <div class="stage__split"></div>
+      <div class="stage__timer">{{ timerLabel }}</div>
       <div class="stage__lanes">
         <RaceHud v-for="lane in lanes" :key="lane.telemetry.id" v-bind="lane" />
       </div>
@@ -91,6 +113,40 @@ onBeforeUnmount(() => {
   inset: 0;
   // Оверлей только показывает: клики и жесты уходят на канвас под ним.
   pointer-events: none;
+}
+
+.stage__split {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 1;
+  width: 2px;
+  background: #fff;
+  box-shadow:
+    0 0 4px 1px rgb(122 240 255 / 90%),
+    0 0 12px 3px rgb(80 220 255 / 45%);
+  transform: translateX(-50%);
+}
+
+.stage__timer {
+  position: absolute;
+  top: 0.55rem;
+  left: 50%;
+  z-index: 2;
+  padding: 0.2em 0.75em 0.15em;
+  color: #7af0ff;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: clamp(1.35rem, 3.4vh, 2.5rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.14em;
+  background: rgb(8 10 14 / 72%);
+  border: 1px solid rgb(80 220 255 / 40%);
+  border-radius: 6px;
+  box-shadow: 0 0 12px rgb(80 220 255 / 18%);
+  text-shadow: 0 0 10px rgb(80 220 255 / 85%);
+  transform: translateX(-50%);
 }
 
 .stage__lanes {

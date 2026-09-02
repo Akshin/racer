@@ -208,7 +208,7 @@ const smallTicks = Array.from({ length: 11 }, (_, value) => {
 .panel {
   min-width: 14em;
   padding: 0.15em 0.85em 0.25em;
-  background: rgb(12 14 18 / 62%);
+  background: rgb(0 0 0 / 75%);
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 8px;
 
@@ -265,7 +265,7 @@ const smallTicks = Array.from({ length: 11 }, (_, value) => {
   display: flex;
   align-items: flex-end;
   padding: 0.35em 0.45em 0.2em 0.15em;
-  background: rgb(12 14 18 / 62%);
+  background: rgb(0 0 0 / 75%);
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 10px;
 }
@@ -288,8 +288,8 @@ const smallTicks = Array.from({ length: 11 }, (_, value) => {
 }
 
 .dials__arc--red {
-  stroke: #{t.$error};
-  filter: drop-shadow(0 0 2px #{t.$error});
+  stroke: #dc3232;
+  filter: drop-shadow(0 0 2px #dc3232);
 }
 
 .dials__tick {

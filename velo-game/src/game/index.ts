@@ -3,10 +3,10 @@
  * Телеметрию игра не знает откуда брать — её подаёт вызывающая сторона через feed.
  */
 
-import { Application, Graphics, type Ticker } from 'pixi.js'
+import { Application, type Ticker } from 'pixi.js'
 import { PLAYER_IDS } from '@/net/protocol'
 import { loadRaceAssets } from './assets'
-import { COLOR_DIVIDER, DIVIDER_WIDTH_PX } from './config'
+import { COLOR_DIVIDER } from './config'
 import { Lane } from './lane'
 
 export async function createGame(
@@ -31,8 +31,7 @@ export async function createGame(
   host.appendChild(app.canvas)
 
   const lanes = PLAYER_IDS.map(() => new Lane())
-  const divider = new Graphics()
-  app.stage.addChild(...lanes.map((lane) => lane.view), divider)
+  app.stage.addChild(...lanes.map((lane) => lane.view))
 
   function layout(): void {
     const { width, height } = app.screen
@@ -42,12 +41,6 @@ export async function createGame(
       lane.view.x = index * laneWidth
       lane.resize(laneWidth, height)
     })
-
-    divider.clear()
-    for (let index = 1; index < lanes.length; index++) {
-      divider.rect(index * laneWidth - DIVIDER_WIDTH_PX / 2, 0, DIVIDER_WIDTH_PX, height)
-    }
-    divider.fill(COLOR_DIVIDER)
   }
 
   function tick(ticker: Ticker): void {

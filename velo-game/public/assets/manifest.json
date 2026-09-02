@@ -6,7 +6,58 @@
     },
     {
       "name": "race",
-      "assets": []
+      "assets": [
+        {
+          "alias": [
+            "race/other/mountains.png",
+            "race/other/mountains",
+            "mountains.png",
+            "mountains"
+          ],
+          "src": [
+            "race/other/mountains.webp",
+            "race/other/mountains.png"
+          ],
+          "data": {
+            "tags": {
+              "m": true
+            }
+          }
+        },
+        {
+          "alias": [
+            "race/other/sun.png",
+            "race/other/sun",
+            "sun.png",
+            "sun"
+          ],
+          "src": [
+            "race/other/sun.webp",
+            "race/other/sun.png"
+          ],
+          "data": {
+            "tags": {
+              "m": true
+            }
+          }
+        },
+        {
+          "alias": [
+            "race/trees",
+            "trees"
+          ],
+          "src": [
+            "race/trees.webp.json",
+            "race/trees.png.json"
+          ],
+          "data": {
+            "tags": {
+              "m": true,
+              "tps": true
+            }
+          }
+        }
+      ]
     }
   ]
 }

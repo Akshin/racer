@@ -12,6 +12,7 @@
  *   finish{tps}/    финишная черта / лента
  *   markings{tps}/  надписи на асфальте
  *   road/           широкая текстура дороги — не в атлас
+ *   other/          фон: солнце, горы — не в атлас
  */
 
 import { pixiPipes } from '@assetpack/core/pixi'
