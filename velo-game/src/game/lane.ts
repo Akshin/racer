@@ -2,7 +2,7 @@
  * Половина сплитскрина: дорога одного велосипедиста.
  *
  * Неподвижное (небо, солнце, горы, земля, обочина, асфальт, сплошные линии)
- * рисуется один раз на изменение размера. Двигаются пунктир и деревья: меш и
+ * рисуется один раз на изменение размера. Двигаются пунктир, деревья и флаги: меш и
  * пул спрайтов, потому что у Graphics пересборка геометрии каждый кадр стоит
  * дорого, а у меша обновление вершин — это перезапись небольшого массива.
  */
@@ -37,11 +37,20 @@ import {
   DASH_LENGTH_M,
   DASH_PERIOD_M,
   DISTANCE_CATCHUP,
+  FLAG_ANCHOR_X,
+  FLAG_DISTANCE_M,
+  FLAG_FADE_M,
+  FLAG_FINISH_GAPS_M,
+  FLAG_HEIGHT_M,
+  FLAG_OFFSET_M,
+  FLAG_ROW_COUNT,
+  FLAG_START_Z_M,
   LINE_WIDTH_M,
   MAX_DASHES,
   MOUNTAINS_ANCHOR_Y,
   MOUNTAINS_CONTENT_TOP,
   MOUNTAINS_WIDTH_RATIO,
+  RACE_DISTANCE_M,
   ROAD_DISTANCE_M,
   ROAD_WIDTH_M,
   SPEED_TAU_MS,
@@ -84,6 +93,8 @@ export class Lane {
   #trees = new Container({ sortableChildren: true })
   #treePool: Sprite[] = []
   #treeTextures: Texture[] = []
+  #flagPool: Sprite[] = []
+  #flagTextures: Texture[] = []
   #dashes: MeshSimple
   #mask = new Graphics()
   #offline = new Container()
@@ -96,6 +107,8 @@ export class Lane {
   #traveled = 0
   /** Множитель визуальной скорости: меняется со страницы проверки без перезапуска. */
   #visualScale = 1
+  /** Длина заезда в метрах адаптера — финишные флаги стоят на visualScale × этом числе. */
+  #raceDistanceM = RACE_DISTANCE_M
 
   /** Собирает слои половины экрана: фон, дорога, деревья, плашку, маску. */
   constructor() {
@@ -111,6 +124,17 @@ export class Lane {
       sprite.anchor.set(0.5, 1)
       sprite.visible = false
       this.#treePool.push(sprite)
+      this.#trees.addChild(sprite)
+    }
+
+    this.#flagTextures = raceSheetTextures('flags')
+    const flagCount = FLAG_ROW_COUNT * 2
+    const flagFallback = this.#flagTextures[0] ?? Texture.EMPTY
+    for (let i = 0; i < flagCount; i++) {
+      const sprite = new Sprite({ texture: flagFallback })
+      sprite.anchor.set(FLAG_ANCHOR_X, 1)
+      sprite.visible = false
+      this.#flagPool.push(sprite)
       this.#trees.addChild(sprite)
     }
 
@@ -156,6 +180,7 @@ export class Lane {
     this.#drawRoad()
     this.#layoutOffline()
     this.#drawTrees()
+    this.#drawFlags()
     this.#drawDashes()
   }
 
@@ -163,7 +188,7 @@ export class Lane {
    * Один кадр анимации: по телеметрии обновляет «пробег» дороги и двигает пунктир.
    * Вызывается из ticker Pixi (~60 раз/с), не путать с километрами в HUD — те с адаптера.
    */
-  update(deltaMs: number, telemetry: PlayerTelemetry, visualScale: number): void {
+  update(deltaMs: number, telemetry: PlayerTelemetry, visualScale: number, raceDistanceM: number): void {
     // Скорость с адаптера уже сглажена, но при потере датчика падает в ноль
     // мгновенно — своё сглаживание нужно, чтобы дорога замирала плавно.
     const catchUp = 1 - Math.exp(-deltaMs / SPEED_TAU_MS)
@@ -178,7 +203,9 @@ export class Lane {
 
     this.#offline.visible = !telemetry.connected
     this.#visualScale = visualScale
+    this.#raceDistanceM = raceDistanceM
     this.#drawTrees()
+    this.#drawFlags()
     this.#drawDashes()
   }
 
@@ -404,6 +431,64 @@ export class Lane {
 
     for (let i = used; i < this.#treePool.length; i++) {
       const extra = this.#treePool[i]
+      if (extra !== undefined) extra.visible = false
+    }
+  }
+
+  /** Три ряда старта, один посередине дистанции, три на финише. */
+  #drawFlags(): void {
+    const textures = this.#flagTextures
+    if (textures.length === 0) {
+      for (const sprite of this.#flagPool) sprite.visible = false
+      return
+    }
+
+    const projection = this.#projection
+    const traveled = this.#traveled * this.#visualScale
+    const halfRoad = ROAD_WIDTH_M / 2
+    const finishZ = this.#raceDistanceM * this.#visualScale
+    const rows = [
+      ...FLAG_START_Z_M,
+      finishZ * 0.5,
+      ...FLAG_FINISH_GAPS_M.map((gap) => finishZ - gap),
+    ]
+    let used = 0
+
+    for (let row = 0; row < rows.length; row++) {
+      const worldZ = rows[row]
+      if (worldZ === undefined) continue
+      const startRows = FLAG_START_Z_M.length
+      const color = row < startRows ? row : row === startRows ? 1 : row - startRows - 1
+      for (let side = 0; side < 2; side++) {
+        const sprite = this.#flagPool[used]
+        if (sprite === undefined) return
+        used += 1
+
+        const camZ = worldZ - traveled
+        const visible = camZ > projection.nearZ && camZ < FLAG_DISTANCE_M
+        sprite.visible = visible
+        if (!visible) continue
+
+        const texture = textures[(color * 2 + side) % textures.length]
+        if (texture !== undefined) sprite.texture = texture
+        const px = projection.scale(camZ)
+        const size = (FLAG_HEIGHT_M * px) / sprite.texture.height
+        const fade = Math.min(1, Math.max(0, (FLAG_DISTANCE_M - camZ) / FLAG_FADE_M))
+        const sign = side === 0 ? -1 : 1
+        sprite.alpha = fade * fade * (3 - 2 * fade)
+        // Полотно в PNG справа от древка: справа зеркалим, оба смотрят на трассу.
+        sprite.scale.set(sign > 0 ? -size : size, size)
+        const rise = BERM_HEIGHT_M * Math.min(1, Math.max(0, FLAG_OFFSET_M / BERM_WIDTH_M))
+        sprite.position.set(
+          projection.centerX + sign * (halfRoad + FLAG_OFFSET_M) * px,
+          projection.y(camZ) - rise * px,
+        )
+        sprite.zIndex = -camZ
+      }
+    }
+
+    for (let i = used; i < this.#flagPool.length; i++) {
+      const extra = this.#flagPool[i]
       if (extra !== undefined) extra.visible = false
     }
   }

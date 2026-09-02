@@ -9,6 +9,38 @@
       "assets": [
         {
           "alias": [
+            "race/banners",
+            "banners"
+          ],
+          "src": [
+            "race/banners.webp.json",
+            "race/banners.png.json"
+          ],
+          "data": {
+            "tags": {
+              "m": true,
+              "tps": true
+            }
+          }
+        },
+        {
+          "alias": [
+            "race/flags",
+            "flags"
+          ],
+          "src": [
+            "race/flags.webp.json",
+            "race/flags.png.json"
+          ],
+          "data": {
+            "tags": {
+              "m": true,
+              "tps": true
+            }
+          }
+        },
+        {
+          "alias": [
             "race/other/mountains.png",
             "race/other/mountains",
             "mountains.png",

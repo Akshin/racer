@@ -13,6 +13,7 @@ export async function createGame(
   host: HTMLElement,
   feed: GameFeed,
   visualScale: () => number,
+  raceDistanceM: () => number,
 ): Promise<Game> {
   const app = new Application()
 
@@ -47,7 +48,9 @@ export async function createGame(
     const players = feed()
     lanes.forEach((lane, index) => {
       const telemetry = players[index]
-      if (telemetry !== undefined) lane.update(ticker.deltaMS, telemetry, visualScale())
+      if (telemetry !== undefined) {
+        lane.update(ticker.deltaMS, telemetry, visualScale(), raceDistanceM())
+      }
     })
   }
 

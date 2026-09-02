@@ -65,6 +65,7 @@ onMounted(async () => {
     host.value,
     () => session.playerChecks.map((check) => check.telemetry),
     () => settings.speedScale,
+    () => settings.raceDistanceM,
   )
   if (closed) {
     started.destroy()

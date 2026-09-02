@@ -61,6 +61,22 @@ export const TREE_DISTANCE_M = 110
 export const TREE_FADE_M = 16
 export const TREE_SLOTS_PER_SIDE = 24
 
+/**
+ * Флаги-паруса у кромки: те же билборды, что деревья.
+ * Ткань в PNG справа от древка — справа зеркалим, чтобы оба полотна смотрели на трассу.
+ */
+export const FLAG_HEIGHT_M = 3.06
+export const FLAG_OFFSET_M = 0.38
+/** Древко у левого края обрезанного кадра. */
+export const FLAG_ANCHOR_X = 0.08
+export const FLAG_FADE_M = 16
+export const FLAG_DISTANCE_M = 110
+/** Три ряда старта, разные цвета. */
+export const FLAG_START_Z_M = [10, 15, 20] as const
+/** Три ряда финиша: сколько метров до линии. */
+export const FLAG_FINISH_GAPS_M = [10, 5, 0] as const
+export const FLAG_ROW_COUNT = FLAG_START_Z_M.length + FLAG_FINISH_GAPS_M.length + 1
+
 /** Постоянная времени разгона/остановки дороги. При потере датчика она замирает за ~2τ. */
 export const SPEED_TAU_MS = 400
 /** Какую долю отставания от дистанции адаптера догоняем за кадр. */
