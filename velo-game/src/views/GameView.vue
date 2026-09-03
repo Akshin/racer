@@ -19,6 +19,9 @@ const CLOCK_STEP_MS = 250
 const FINISH_REVEAL_MS = 1200
 /** Сколько держим «это было круто» перед возвратом на лидерборд. */
 const FINISH_HOLD_MS = 4000
+/** Один такт отсчёта: появление и уход цифры / «поехали». */
+const COUNTDOWN_BEAT_MS = 950
+const COUNTDOWN_STEPS = ['Готовы?', '3', '2', '1', 'Поехали'] as const
 
 type LaneFinish = {
   index: number
@@ -33,7 +36,9 @@ const router = useRouter()
 const host = useTemplateRef<HTMLDivElement>('host')
 
 const elapsedMs = ref(0)
+const racing = ref(false)
 const coasting = ref(false)
+const countdownText = ref<string | null>(null)
 const showFinish = ref(false)
 const finishes = ref<LaneFinish[]>([])
 const frozenTelemetry = ref<PlayerTelemetry[] | null>(null)
@@ -47,13 +52,16 @@ const timerLabel = computed(() => {
 })
 
 const lanes = computed<LaneHud[]>(() =>
-  session.playerChecks.map((check, index) => ({
-    index,
-    telemetry: frozenTelemetry.value?.[index] ?? check.telemetry,
-    sensor: check.sensor,
-    elapsedMs: elapsedMs.value,
-    nick: session.racers[index]?.nick ?? null,
-  })),
+  session.playerChecks.map((check, index) => {
+    const live = frozenTelemetry.value?.[index] ?? check.telemetry
+    return {
+      index,
+      telemetry: racing.value || showFinish.value ? live : { ...live, speed: 0, distance: 0 },
+      sensor: check.sensor,
+      elapsedMs: elapsedMs.value,
+      nick: session.racers[index]?.nick ?? null,
+    }
+  }),
 )
 
 let game: Game | null = null
@@ -62,6 +70,7 @@ let closed = false
 let clock: number | undefined
 let reveal: number | undefined
 let leave: number | undefined
+let countdownBeat: number | undefined
 let finished = false
 
 async function finish(): Promise<void> {
@@ -103,19 +112,41 @@ async function finish(): Promise<void> {
   }, FINISH_REVEAL_MS)
 }
 
-onMounted(async () => {
-  // Вход на экран гонки — это старт заезда: обнуляем накопленную адаптером дистанцию.
-  session.resetRace()
-
+function startClock(): void {
   const startedAt = Date.now()
   clock = window.setInterval(() => {
     elapsedMs.value = Date.now() - startedAt
     if (elapsedMs.value < RACE_DURATION_MS || finished) return
     elapsedMs.value = RACE_DURATION_MS
     finished = true
+    racing.value = false
     window.clearInterval(clock)
     void finish()
   }, CLOCK_STEP_MS)
+}
+
+function startRace(): void {
+  if (closed || racing.value || finished) return
+  session.resetRace()
+  game?.beginRace()
+  racing.value = true
+  startClock()
+}
+
+function playCountdown(step = 0): void {
+  const label = COUNTDOWN_STEPS[step]
+  if (label === undefined) {
+    countdownText.value = null
+    return
+  }
+  countdownText.value = label
+  if (step === COUNTDOWN_STEPS.length - 1) startRace()
+  countdownBeat = window.setTimeout(() => playCountdown(step + 1), COUNTDOWN_BEAT_MS)
+}
+
+onMounted(async () => {
+  session.resetRace()
+  playCountdown()
 
   if (host.value === null) return
 
@@ -124,6 +155,7 @@ onMounted(async () => {
     () => session.playerChecks.map((check) => check.telemetry),
     () => settings.speedScale,
     () => settings.raceDistanceM,
+    () => racing.value,
     () => coasting.value,
   )
   if (closed) {
@@ -131,6 +163,7 @@ onMounted(async () => {
     return
   }
   game = started
+  if (racing.value) game.beginRace()
 })
 
 onBeforeUnmount(() => {
@@ -138,6 +171,7 @@ onBeforeUnmount(() => {
   window.clearInterval(clock)
   window.clearTimeout(reveal)
   window.clearTimeout(leave)
+  window.clearTimeout(countdownBeat)
   game?.destroy()
   game = null
 })
@@ -149,9 +183,26 @@ onBeforeUnmount(() => {
 
     <div class="stage__overlay">
       <div class="stage__split"></div>
-      <div v-if="!showFinish" class="stage__timer">{{ timerLabel }}</div>
+      <div v-if="racing && !showFinish" class="stage__timer">{{ timerLabel }}</div>
       <div class="stage__lanes" :class="{ 'stage__lanes--dim': showFinish }">
         <RaceHud v-for="lane in lanes" :key="lane.telemetry.id" v-bind="lane" />
+      </div>
+      <div v-if="countdownText !== null" class="stage__countdown">
+        <div
+          v-for="lane in lanes"
+          :key="lane.index"
+          class="stage__countdown-lane"
+          :class="`stage__countdown-lane--${lane.index + 1}`"
+        >
+          <p
+            :key="countdownText"
+            class="stage__countdown-text"
+            :class="{ 'stage__countdown-text--go': countdownText.length > 1 }"
+            :style="{ animationDuration: `${COUNTDOWN_BEAT_MS}ms` }"
+          >
+            {{ countdownText }}
+          </p>
+        </div>
       </div>
       <div v-if="showFinish" class="stage__finish">
         <FinishCard v-for="card in finishes" :key="card.index" v-bind="card" />
@@ -161,6 +212,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
+@use '@/assets/styles/theme' as t;
+
 .stage {
   position: relative;
   width: 100vw;
@@ -198,7 +251,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 0.55rem;
   left: 50%;
-  z-index: 2;
+  z-index: 5;
   padding: 0.2em 0.75em 0.15em;
   color: #7af0ff;
   font-family: 'Roboto Condensed', sans-serif;
@@ -212,6 +265,8 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 12px rgb(80 220 255 / 18%);
   text-shadow: 0 0 10px rgb(80 220 255 / 85%);
   transform: translateX(-50%);
+  transform-origin: center top;
+  animation: timer-pop 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .stage__lanes {
@@ -235,6 +290,87 @@ onBeforeUnmount(() => {
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
   animation: finish-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.stage__countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.stage__countdown-lane {
+  --player: #{t.$player-1};
+
+  display: grid;
+  place-items: center;
+  padding: 0 1rem;
+
+  &--2 {
+    --player: #{t.$player-2};
+  }
+}
+
+.stage__countdown-text {
+  margin: 0;
+  color: var(--player);
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: clamp(5.5rem, 22vh, 12rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow:
+    0 2px 0 rgb(0 0 0 / 40%),
+    0 18px 50px rgb(0 0 0 / 55%),
+    0 0 36px var(--player);
+  animation: countdown-beat ease-in-out both;
+
+  &--go {
+    font-size: clamp(2.2rem, 8vh, 5.4rem);
+    letter-spacing: 0.12em;
+  }
+}
+
+@keyframes timer-pop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(3.2);
+  }
+
+  55% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@keyframes countdown-beat {
+  0% {
+    opacity: 0;
+    transform: scale(0.62);
+  }
+
+  16% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  72% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
 }
 
 @keyframes finish-rise {

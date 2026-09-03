@@ -14,6 +14,7 @@ export async function createGame(
   feed: GameFeed,
   visualScale: () => number,
   raceDistanceM: () => number,
+  racing: () => boolean,
   coasting: () => boolean,
 ): Promise<Game> {
   const app = new Application()
@@ -38,16 +39,25 @@ export async function createGame(
   function layout(): void {
     const { width, height } = app.screen
     const laneWidth = width / lanes.length
+    const scale = visualScale()
+    const distance = raceDistanceM()
 
     lanes.forEach((lane, index) => {
+      lane.setParams(scale, distance)
       lane.view.x = index * laneWidth
       lane.resize(laneWidth, height)
     })
   }
 
   function tick(ticker: Ticker): void {
-    if (coasting()) {
-      lanes.forEach((lane) => lane.coast(ticker.deltaMS))
+    if (!racing()) {
+      if (coasting()) {
+        lanes.forEach((lane) => lane.coast(ticker.deltaMS))
+        return
+      }
+      const scale = visualScale()
+      const distance = raceDistanceM()
+      lanes.forEach((lane) => lane.setParams(scale, distance))
       return
     }
 
@@ -66,6 +76,9 @@ export async function createGame(
 
   return {
     app,
+    beginRace(): void {
+      lanes.forEach((lane) => lane.beginRace())
+    },
     destroy(): void {
       app.ticker.remove(tick)
       app.renderer.off('resize', layout)

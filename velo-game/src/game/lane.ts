@@ -62,6 +62,7 @@ import {
   FLAG_PERIOD_M,
   FLAG_ROW_GAP_M,
   FLAG_ROWS,
+  FLAG_SINK_M,
   LINE_WIDTH_M,
   MAX_DASHES,
   MOUNTAINS_ANCHOR_Y,
@@ -70,6 +71,7 @@ import {
   RACE_DISTANCE_M,
   ROAD_DISTANCE_M,
   ROAD_WIDTH_M,
+  SPEED_SCALE,
   SPEED_TAU_MS,
   COAST_TAU_MS,
   SUN_CONTENT_BOTTOM,
@@ -125,8 +127,10 @@ export class Lane {
   #speed = 0
   /** Пройденный путь в метрах — по нему считается фаза пунктира и деревьев. */
   #traveled = 0
+  /** Пока true — не догоняем дистанцию адаптера: она могла накопиться на отсчёте. */
+  #ignoreAdapterDistance = true
   /** Множитель визуальной скорости: меняется со страницы проверки без перезапуска. */
-  #visualScale = 1
+  #visualScale = SPEED_SCALE
   /** Длина заезда в метрах адаптера — финишные флаги стоят на visualScale × этом числе. */
   #raceDistanceM = RACE_DISTANCE_M
 
@@ -233,15 +237,39 @@ export class Lane {
     this.#speed += (telemetry.speed - this.#speed) * catchUp
     this.#traveled += this.#speed * KMH_TO_MS * (deltaMs / 1000)
 
-    // Догоняем дистанцию адаптера, если отстали (например, вкладка была свёрнута
-    // и кадры не шли), но никогда не откатываемся: дорога не может поехать назад.
-    if (telemetry.distance > this.#traveled) {
+    // После «поехали» адаптер ещё кадр-два шлёт старую дистанцию. Если догнать —
+    // дорога прыгнет вперёд, как будто гонка шла на отсчёте.
+    if (this.#ignoreAdapterDistance) {
+      if (telemetry.distance <= this.#traveled + 1.5) this.#ignoreAdapterDistance = false
+    } else if (telemetry.distance > this.#traveled) {
       this.#traveled += (telemetry.distance - this.#traveled) * DISTANCE_CATCHUP
     }
 
     this.#offline.visible = !telemetry.connected
     this.#visualScale = visualScale
     this.#raceDistanceM = raceDistanceM
+    this.#drawTrees()
+    this.#drawFlags()
+    this.#drawBanners()
+    this.#drawDashes()
+  }
+
+  /** Параметры заезда до первого кадра гонки — иначе флаги на отсчёте стоят в другой фазе. */
+  setParams(visualScale: number, raceDistanceM: number): void {
+    if (this.#visualScale === visualScale && this.#raceDistanceM === raceDistanceM) return
+    this.#visualScale = visualScale
+    this.#raceDistanceM = raceDistanceM
+    this.#drawTrees()
+    this.#drawFlags()
+    this.#drawBanners()
+    this.#drawDashes()
+  }
+
+  /** Старт заезда: дорога с нуля, без догона старой дистанции адаптера. */
+  beginRace(): void {
+    this.#speed = 0
+    this.#traveled = 0
+    this.#ignoreAdapterDistance = true
     this.#drawTrees()
     this.#drawFlags()
     this.#drawBanners()
@@ -530,7 +558,7 @@ export class Lane {
           const rise = BERM_HEIGHT_M * Math.min(1, Math.max(0, FLAG_OFFSET_M / BERM_WIDTH_M))
           sprite.position.set(
             projection.centerX + sign * (halfRoad + FLAG_OFFSET_M) * px,
-            projection.y(camZ) - rise * px,
+            projection.y(camZ) - (rise - FLAG_SINK_M) * px,
           )
           sprite.zIndex = -camZ
         }
