@@ -59,7 +59,9 @@ const clock = computed(() => {
   return [hours, minutes, seconds].map((part) => String(part).padStart(2, '0')).join(':')
 })
 
-const displayName = computed(() => names[props.index] ?? `Игрок ${props.index + 1}`)
+const displayName = computed(
+  () => props.nick || names[props.index] || `Игрок ${props.index + 1}`,
+)
 
 const rows = computed(() => [
   { label: 'Скорость', value: props.telemetry.speed.toFixed(1), unit: 'км/ч' },

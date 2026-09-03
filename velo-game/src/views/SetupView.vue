@@ -43,6 +43,9 @@ function time(at: number): string {
         Подключитесь к адаптеру и покрутите педали. Для зала с одним велосипедом включите
         «достаточно одного тренажёра».
       </p>
+      <p>
+        <RouterLink to="/leaderboard">Лидерборд</RouterLink>
+      </p>
     </header>
 
     <section class="card">
@@ -118,8 +121,8 @@ function time(at: number): string {
     </section>
 
     <section class="card">
-      <button class="primary wide" :disabled="!session.canRace" @click="router.push('/game')">
-        Перейти к игре
+      <button class="primary wide" :disabled="!session.canRace" @click="router.push('/leaderboard')">
+        Перейти к лидерборду
       </button>
       <ul v-if="session.blockers.length" class="blockers">
         <li v-for="blocker in session.blockers" :key="blocker">{{ blocker }}</li>
@@ -172,6 +175,10 @@ header {
 
   p {
     margin-top: 0.25rem;
+  }
+
+  a {
+    color: t.$accent;
   }
 }
 

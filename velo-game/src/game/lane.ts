@@ -18,7 +18,7 @@ import {
   Text,
   Texture,
 } from 'pixi.js'
-import { raceSheetTextures, raceSprite } from './assets'
+import { raceSheetTextures, raceSprite, whiteTexture } from './assets'
 import {
   BANNER_DISTANCE_M,
   BANNER_FADE_M,
@@ -71,6 +71,7 @@ import {
   ROAD_DISTANCE_M,
   ROAD_WIDTH_M,
   SPEED_TAU_MS,
+  COAST_TAU_MS,
   SUN_CONTENT_BOTTOM,
   SUN_CONTENT_LEFT,
   SUN_CONTENT_RIGHT,
@@ -183,7 +184,7 @@ export class Lane {
 
     // Texture.WHITE + tint: цвет разметки задаём оттенком, текстура не нужна.
     this.#dashes = new MeshSimple({
-      texture: Texture.WHITE,
+      texture: whiteTexture(),
       vertices,
       indices,
       uvs: new Float32Array(MAX_DASHES * COORDS_PER_QUAD),
@@ -241,6 +242,21 @@ export class Lane {
     this.#offline.visible = !telemetry.connected
     this.#visualScale = visualScale
     this.#raceDistanceM = raceDistanceM
+    this.#drawTrees()
+    this.#drawFlags()
+    this.#drawBanners()
+    this.#drawDashes()
+  }
+
+  /**
+   * Выкат после финиша: скорость к нулю, телеметрию больше не слушаем.
+   * Дорога не откатывается и не догоняет адаптер — гонка уже посчитана.
+   */
+  coast(deltaMs: number): void {
+    const catchUp = 1 - Math.exp(-deltaMs / COAST_TAU_MS)
+    this.#speed += (0 - this.#speed) * catchUp
+    if (this.#speed < 0.08) this.#speed = 0
+    this.#traveled += this.#speed * KMH_TO_MS * (deltaMs / 1000)
     this.#drawTrees()
     this.#drawFlags()
     this.#drawBanners()

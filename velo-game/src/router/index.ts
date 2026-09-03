@@ -7,6 +7,11 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'setup', component: SetupView },
     {
+      path: '/leaderboard',
+      name: 'leaderboard',
+      component: () => import('@/views/LeaderboardView.vue'),
+    },
+    {
       path: '/game',
       name: 'game',
       component: () => import('@/views/GameView.vue'),

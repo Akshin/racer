@@ -14,6 +14,7 @@ export async function createGame(
   feed: GameFeed,
   visualScale: () => number,
   raceDistanceM: () => number,
+  coasting: () => boolean,
 ): Promise<Game> {
   const app = new Application()
 
@@ -45,6 +46,11 @@ export async function createGame(
   }
 
   function tick(ticker: Ticker): void {
+    if (coasting()) {
+      lanes.forEach((lane) => lane.coast(ticker.deltaMS))
+      return
+    }
+
     const players = feed()
     lanes.forEach((lane, index) => {
       const telemetry = players[index]
@@ -63,12 +69,9 @@ export async function createGame(
     destroy(): void {
       app.ticker.remove(tick)
       app.renderer.off('resize', layout)
-      // releaseGlobalResources — иначе после повторного входа в гонку остаются
-      // чужие текстуры и батчи из прошлого приложения.
-      app.destroy(
-        { removeView: true, releaseGlobalResources: true },
-        { children: true, texture: true, textureSource: true },
-      )
+      // Текстуры бандла и Texture.WHITE общие — их нельзя destroy'ить вместе со сценой,
+      // иначе следующий заезд падает на source.alphaMode === null.
+      app.destroy({ removeView: true, releaseGlobalResources: true }, { children: true })
     },
   }
 }

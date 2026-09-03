@@ -1,0 +1,13 @@
+@use 'reset';
+@use 'theme' as t;
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: t.$bg;
+  color: t.$text;
+  font-family: t.$font-stack;
+  font-size: 18px;
+}

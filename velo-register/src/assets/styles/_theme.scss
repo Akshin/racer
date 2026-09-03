@@ -1,0 +1,66 @@
+// Инструменты темы: палитра и миксины. Как в velo-game — один вид на площадке.
+
+$bg: #0d1117;
+$surface: #161b22;
+$surface-hover: #1c232c;
+$border: #2c333d;
+$text: #e6edf3;
+$muted: #8b949e;
+$accent: #2f81f7;
+$ok: #3fb950;
+$error: #f85149;
+
+$radius: 12px;
+$font-stack:
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  sans-serif;
+
+@mixin button {
+  padding: 0.9rem 1.25rem;
+  color: $text;
+  background: $surface-hover;
+  border: 1px solid $border;
+  border-radius: $radius;
+  transition: border-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: $accent;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+@mixin button-primary {
+  color: #fff;
+  font-weight: 600;
+  background: $accent;
+  border-color: $accent;
+}
+
+@mixin field {
+  width: 100%;
+  padding: 1rem 1.1rem;
+  color: $text;
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: $radius;
+
+  &:focus-visible {
+    outline: none;
+    border-color: $accent;
+  }
+}
+
+@mixin card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius;
+}

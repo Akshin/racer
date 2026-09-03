@@ -46,6 +46,8 @@ export const useSessionStore = defineStore('session', () => {
   const tickHz = ref(0)
   const metersPerCrankRev = ref(0)
   const lastTelemetryAt = ref(0)
+  /** Кто едет в текущем заезде. Задаётся на лидерборде перед стартом. */
+  const racers = ref<[RaceRacer, RaceRacer]>([null, null])
 
   // Часы для проверки «данные ещё идут»: дают шкале обновляться без новых сообщений.
   const now = ref(Date.now())
@@ -190,6 +192,11 @@ export const useSessionStore = defineStore('session', () => {
     log('info', 'Отправлен сброс дистанции')
   }
 
+  /** Назначить гонщиков перед входом на экран заезда. */
+  function setRacers(p1: RaceRacer, p2: RaceRacer): void {
+    racers.value = [p1, p2]
+  }
+
   function clearLogs(): void {
     logs.value = []
   }
@@ -205,9 +212,11 @@ export const useSessionStore = defineStore('session', () => {
     blockers,
     ready,
     canRace,
+    racers,
     connect,
     disconnect,
     resetRace,
+    setRacers,
     clearLogs,
   }
 })
