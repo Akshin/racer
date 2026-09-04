@@ -33,7 +33,7 @@ export async function createGame(
 
   host.appendChild(app.canvas)
 
-  const lanes = PLAYER_IDS.map(() => new Lane())
+  const lanes = PLAYER_IDS.map((_, index) => new Lane(`racer${index + 1}`))
   app.stage.addChild(...lanes.map((lane) => lane.view))
 
   function layout(): void {

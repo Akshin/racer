@@ -2,12 +2,14 @@
  * Половина сплитскрина: дорога одного велосипедиста.
  *
  * Неподвижное (небо, солнце, горы, земля, обочина, асфальт, сплошные линии)
- * рисуется один раз на изменение размера. Двигаются пунктир, деревья, флаги и баннеры: меш и
- * пул спрайтов, потому что у Graphics пересборка геометрии каждый кадр стоит
- * дорого, а у меша обновление вершин — это перезапись небольшого массива.
+ * рисуется один раз на изменение размера. Двигаются пунктир, деревья, флаги, баннеры
+ * и педали велосипедиста: меш и пул спрайтов, потому что у Graphics пересборка
+ * геометрии каждый кадр стоит дорого, а у меша обновление вершин — это перезапись
+ * небольшого массива.
  */
 
 import {
+  AnimatedSprite,
   Color,
   Container,
   FillGradient,
@@ -49,6 +51,10 @@ import {
   COLOR_SKY_TOP,
   COLOR_SUN_GLOW_INNER,
   COLOR_SUN_GLOW_MID,
+  CYCLIST_ANIM_AT_KMH,
+  CYCLIST_ANIM_SPEED,
+  CYCLIST_HEIGHT_M,
+  CYCLIST_Z_M,
   DASH_DISTANCE_M,
   DASH_LENGTH_M,
   DASH_PERIOD_M,
@@ -122,6 +128,7 @@ export class Lane {
   #offline = new Container()
   #offlineBox = new Graphics()
   #offlineText = new Text({ text: 'нет сигнала', style: { fill: 0xffffff, fontSize: 20 } })
+  #cyclist: AnimatedSprite | null = null
 
   /** Сглаженная скорость, км/ч. */
   #speed = 0
@@ -135,7 +142,7 @@ export class Lane {
   #raceDistanceM = RACE_DISTANCE_M
 
   /** Собирает слои половины экрана: фон, дорога, деревья, плашку, маску. */
-  constructor() {
+  constructor(racerAlias = 'racer1') {
     this.#sun = raceSprite('sun')
     this.#mountains = raceSprite('mountains')
     if (this.#sun) this.#sun.anchor.set(0.5, 0.5)
@@ -179,6 +186,17 @@ export class Lane {
       this.#trees.addChild(group)
     }
 
+    const cyclistFrames = raceSheetTextures(racerAlias)
+    if (cyclistFrames.length > 0) {
+      this.#cyclist = new AnimatedSprite({
+        textures: cyclistFrames,
+        autoPlay: false,
+        loop: true,
+        animationSpeed: 0,
+        anchor: { x: 0.5, y: 1 },
+      })
+    }
+
     const vertices = new Float32Array(MAX_DASHES * COORDS_PER_QUAD)
     const indices = new Uint32Array(MAX_DASHES * 6)
     for (let dash = 0; dash < MAX_DASHES; dash++) {
@@ -205,7 +223,9 @@ export class Lane {
     }
     this.view.addChild(this.#ground)
     if (this.#mountains !== null) this.view.addChild(this.#mountains)
-    this.view.addChild(this.#berm, this.#road, this.#dashes, this.#trees, this.#offline, this.#mask)
+    this.view.addChild(this.#berm, this.#road, this.#dashes, this.#trees)
+    if (this.#cyclist !== null) this.view.addChild(this.#cyclist)
+    this.view.addChild(this.#offline, this.#mask)
     // У нижнего края дорога шире половины экрана — без маски она залезала бы к соседу.
     this.view.mask = this.#mask
   }
@@ -224,6 +244,7 @@ export class Lane {
     this.#drawFlags()
     this.#drawBanners()
     this.#drawDashes()
+    this.#layoutCyclist()
   }
 
   /**
@@ -252,6 +273,7 @@ export class Lane {
     this.#drawFlags()
     this.#drawBanners()
     this.#drawDashes()
+    this.#syncCyclistAnim()
   }
 
   /** Параметры заезда до первого кадра гонки — иначе флаги на отсчёте стоят в другой фазе. */
@@ -274,6 +296,7 @@ export class Lane {
     this.#drawFlags()
     this.#drawBanners()
     this.#drawDashes()
+    this.#syncCyclistAnim()
   }
 
   /**
@@ -289,6 +312,7 @@ export class Lane {
     this.#drawFlags()
     this.#drawBanners()
     this.#drawDashes()
+    this.#syncCyclistAnim()
   }
 
   /** Небо до горизонта. Земля рисуется после солнца, чтобы диск не торчал из-под гор. */
@@ -676,6 +700,31 @@ export class Lane {
       )
       .fill({ color: 0x000000, alpha: 0.55 })
     this.#offline.position.set(size, size)
+  }
+
+  /** Велосипедист стоит на асфальте на фиксированном z — камера как бы едет за ним. */
+  #layoutCyclist(): void {
+    if (this.#cyclist === null) return
+    const projection = this.#projection
+    const px = projection.scale(CYCLIST_Z_M)
+    const origH = this.#cyclist.texture.orig.height
+    const size = (CYCLIST_HEIGHT_M * px) / origH
+    this.#cyclist.scale.set(size)
+    this.#cyclist.position.set(projection.centerX, projection.y(CYCLIST_Z_M))
+  }
+
+  /** Кадры крутятся как дорога: сглаженная скорость × factor со страницы проверки. */
+  #syncCyclistAnim(): void {
+    const cyclist = this.#cyclist
+    if (cyclist === null) return
+    const visualKmh = this.#speed * this.#visualScale
+    if (visualKmh < 0.15) {
+      cyclist.animationSpeed = 0
+      if (cyclist.playing) cyclist.stop()
+      return
+    }
+    cyclist.animationSpeed = (visualKmh / CYCLIST_ANIM_AT_KMH) * CYCLIST_ANIM_SPEED
+    if (!cyclist.playing) cyclist.play()
   }
 }
 

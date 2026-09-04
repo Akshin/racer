@@ -103,6 +103,19 @@ export const BANNER_FADE_M = 14
 export const BANNER_SLOTS_PER_SIDE = Math.ceil(BANNER_DISTANCE_M / BANNER_PERIOD_M) + 2
 /** Баннеры только на первых метрах заезда (метры адаптера, как в HUD). */
 export const BANNER_UNTIL_M = 170
+
+/**
+ * Велосипедист — неподвижный относительно камеры спрайт по центру дороги.
+ * Высота — от покрышки до шлема; z — насколько впереди камеры стоит модель.
+ */
+export const CYCLIST_HEIGHT_M = 1.72
+export const CYCLIST_Z_M = 5.1
+/**
+ * animationSpeed Pixi при 1× слайдера и этой скорости с датчика.
+ * Исходный ролик ~16 кадр/с → 16/60. На трассе множится на speedScale.
+ */
+export const CYCLIST_ANIM_AT_KMH = 28
+export const CYCLIST_ANIM_SPEED = 16 / 60
 export const COLOR_METAL = 0x2a2e33
 export const COLOR_METAL_LIT = 0x4a5158
 

@@ -1,26 +1,10 @@
-import glob
 import json
-import os
-import shutil
 import subprocess
 
-ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
-OUT_DIR = os.path.join(os.path.dirname(__file__), "frames")
-TARGET_FRAMES = 48
+from common import FRAMES_DIR, RACERS, TARGET_FRAMES, list_videos, reset_racer_dirs
 
 
-def main() -> None:
-    if os.path.exists(OUT_DIR):
-        shutil.rmtree(OUT_DIR)
-    os.makedirs(OUT_DIR)
-
-    videos = glob.glob(os.path.join(ASSETS_DIR, "*.mov"))
-    if not videos:
-        raise FileNotFoundError(f"No .mov files found in {ASSETS_DIR}")
-
-    video = videos[0]
-    print(f"Processing: {video}")
-
+def video_duration(path) -> float:
     probe = subprocess.run(
         [
             "ffprobe",
@@ -30,7 +14,7 @@ def main() -> None:
             "format=duration",
             "-of",
             "json",
-            video,
+            str(path),
         ],
         check=True,
         capture_output=True,
@@ -39,26 +23,35 @@ def main() -> None:
     duration = float(json.loads(probe.stdout)["format"]["duration"])
     if duration <= 0:
         raise RuntimeError(f"Invalid video duration: {duration}")
+    return duration
 
-    fps = TARGET_FRAMES / duration
 
+def extract_one(video, out_dir) -> None:
+    fps = TARGET_FRAMES / video_duration(video)
     subprocess.run(
         [
             "ffmpeg",
             "-y",
             "-i",
-            video,
+            str(video),
             "-vf",
             f"fps={fps:.8f}",
             "-frames:v",
             str(TARGET_FRAMES),
-            os.path.join(OUT_DIR, "frame_%05d.png"),
+            str(out_dir / "frame_%05d.png"),
         ],
         check=True,
     )
+    pngs = list(out_dir.glob("*.png"))
+    print(f"  {video.name} → {out_dir.name}: {len(pngs)} кадров")
 
-    pngs = [f for f in os.listdir(OUT_DIR) if f.endswith(".png")]
-    print(f"Done — {len(pngs)} frames saved to {OUT_DIR} (target: {TARGET_FRAMES})")
+
+def main() -> None:
+    videos = list_videos()
+    reset_racer_dirs(FRAMES_DIR)
+    for racer, video in zip(RACERS, videos):
+        print(f"Extract {racer}: {video.name}")
+        extract_one(video, FRAMES_DIR / racer)
 
 
 if __name__ == "__main__":
