@@ -1,107 +1,58 @@
 <script setup lang="ts">
 /**
- * Показатели одного велосипедиста поверх канваса. Сделан в HTML/CSS, а не в PixiJS:
- * оформление ещё будет меняться, а вёрстку править дешевле, чем сцену.
+ * Показатели одного велосипедиста поверх канваса. HTML/CSS, не PixiJS:
+ * оформление править дешевле, чем сцену.
  */
 import { computed } from 'vue'
+import botLeftUrl from '@/assets/images/bot_left.png'
+import botRightUrl from '@/assets/images/bot_right.png'
 
-/** Верх большой шкалы каденса, как на референсе. */
-const CADENCE_MAX = 80
-/** С этой отметки дуга шкалы становится красной. */
-const REDLINE = 55
-/** Малая дуга: 0–10, игла = каденс / 8, чтобы совпадать с большой. */
-const SMALL_MAX = 10
-/** 0° = 12 часов, дальше по часовой. Старт тахометра — около 7:30. */
-const DIAL_START_DEG = 225
-const DIAL_SWEEP_DEG = 270
-const SMALL_START_DEG = 200
-const SMALL_SWEEP_DEG = 130
+/** Верх шкалы спидометра, км/ч. */
+const SPEED_MAX = 45
+/** 0° = 12 часов, по часовой. 270° — девять часов (слева), дуга через верх до 90°. */
+const DIAL_START_DEG = 270
+const DIAL_SWEEP_DEG = 180
+const CX = 110
+const CY = 112
+const TICK_OUTER = 94
+const TICK_MAJOR_INNER = 81
+const TICK_MINOR_INNER = 86
+const NUM_R = 70
+const NEEDLE_R = 78
+const FILL_R = 76
 
 const props = defineProps<LaneHud>()
 
-const names = ['Игрок 1', 'Игрок 2'] as const
-
-function polar(
-  cx: number,
-  cy: number,
-  radius: number,
-  degFrom12: number,
-): { x: number; y: number } {
+function polar(radius: number, degFrom12: number): { x: number; y: number } {
   const rad = (degFrom12 * Math.PI) / 180
-  return { x: cx + radius * Math.sin(rad), y: cy - radius * Math.cos(rad) }
+  return { x: CX + radius * Math.sin(rad), y: CY - radius * Math.cos(rad) }
 }
 
-function arcPath(
-  cx: number,
-  cy: number,
-  radius: number,
-  startDeg: number,
-  sweepDeg: number,
-): string {
-  const start = polar(cx, cy, radius, startDeg)
-  const end = polar(cx, cy, radius, startDeg + sweepDeg)
-  const large = sweepDeg > 180 ? 1 : 0
-  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${large} 1 ${end.x} ${end.y}`
+function wedgePath(fromDeg: number, toDeg: number, radius: number): string {
+  const start = polar(radius, fromDeg)
+  const end = polar(radius, toDeg)
+  const sweep = toDeg - fromDeg
+  if (sweep <= 0.4) return ''
+  const large = sweep > 180 ? 1 : 0
+  return `M ${CX} ${CY} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${large} 1 ${end.x} ${end.y} Z`
 }
 
-function needlePoints(cx: number, cy: number, radius: number, degFrom12: number): string {
-  const tip = polar(cx, cy, radius, degFrom12)
-  const left = polar(cx, cy, 2.2, degFrom12 - 90)
-  const right = polar(cx, cy, 2.2, degFrom12 + 90)
-  return `${left.x},${left.y} ${tip.x},${tip.y} ${right.x},${right.y}`
-}
+const displayName = computed(() => props.nick || `Игрок ${props.index + 1}`)
+const speed = computed(() => Math.min(Math.max(props.telemetry.speed, 0), SPEED_MAX))
+const speedLabel = computed(() => props.telemetry.speed.toFixed(1))
+const distanceKm = computed(() => (props.telemetry.distance / 1000).toFixed(1))
+const mascotUrl = computed(() => (props.index === 0 ? botLeftUrl : botRightUrl))
+const glowId = computed(() => `hud-glow-${props.index}`)
+const fillId = computed(() => `hud-fill-${props.index}`)
+const needleDeg = computed(() => DIAL_START_DEG + (speed.value / SPEED_MAX) * DIAL_SWEEP_DEG)
+const speedWedge = computed(() => wedgePath(DIAL_START_DEG, needleDeg.value, FILL_R))
 
-const clock = computed(() => {
-  const total = Math.floor(props.elapsedMs / 1000)
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.floor((total % 3600) / 60)
-  const seconds = total % 60
-  return [hours, minutes, seconds].map((part) => String(part).padStart(2, '0')).join(':')
-})
-
-const displayName = computed(
-  () => props.nick || names[props.index] || `Игрок ${props.index + 1}`,
-)
-
-const rows = computed(() => [
-  { label: 'Скорость', value: props.telemetry.speed.toFixed(1), unit: 'км/ч' },
-  { label: 'Каденс', value: props.telemetry.cadence.toFixed(0), unit: 'вк/мин' },
-  { label: 'Расст.', value: (props.telemetry.distance / 1000).toFixed(1), unit: 'км' },
-  { label: 'Время', value: clock.value, unit: '' },
-  { label: 'Мощность', value: '—', unit: 'Вт' },
-])
-
-const cadence = computed(() => Math.min(Math.max(props.telemetry.cadence, 0), CADENCE_MAX))
-
-const mainNeedleDeg = computed(
-  () => DIAL_START_DEG + (cadence.value / CADENCE_MAX) * DIAL_SWEEP_DEG,
-)
-
-const smallNeedleDeg = computed(
-  () => SMALL_START_DEG + (Math.min(cadence.value / 8, SMALL_MAX) / SMALL_MAX) * SMALL_SWEEP_DEG,
-)
-
-const redlineDeg = DIAL_START_DEG + (REDLINE / CADENCE_MAX) * DIAL_SWEEP_DEG
-const mainSafeArc = arcPath(50, 50, 44, DIAL_START_DEG, redlineDeg - DIAL_START_DEG)
-const mainRedArc = arcPath(50, 50, 44, redlineDeg, DIAL_START_DEG + DIAL_SWEEP_DEG - redlineDeg)
-const smallArc = arcPath(40, 42, 32, SMALL_START_DEG, SMALL_SWEEP_DEG)
-
-const mainTicks = Array.from({ length: 17 }, (_, step) => {
-  const value = step * 5
-  const deg = DIAL_START_DEG + (value / CADENCE_MAX) * DIAL_SWEEP_DEG
-  const major = value % 10 === 0
-  const inner = polar(50, 50, major ? 38 : 40, deg)
-  const outer = polar(50, 50, 43, deg)
-  const label = major ? polar(50, 50, 32, deg) : null
-  return { value, major, inner, outer, label }
-})
-
-const smallTicks = Array.from({ length: 11 }, (_, value) => {
-  const deg = SMALL_START_DEG + (value / SMALL_MAX) * SMALL_SWEEP_DEG
-  const major = value === 5
-  const inner = polar(40, 42, major ? 26 : 28, deg)
-  const outer = polar(40, 42, 31, deg)
-  const label = major ? polar(40, 42, 20, deg) : null
+const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
+  const deg = DIAL_START_DEG + (value / SPEED_MAX) * DIAL_SWEEP_DEG
+  const major = value % 5 === 0
+  const inner = polar(major ? TICK_MAJOR_INNER : TICK_MINOR_INNER, deg)
+  const outer = polar(TICK_OUTER, deg)
+  const label = major ? polar(NUM_R, deg) : null
   return { value, major, inner, outer, label }
 })
 </script>
@@ -111,78 +62,68 @@ const smallTicks = Array.from({ length: 11 }, (_, value) => {
     class="hud"
     :class="[`hud--player-${index + 1}`, { 'hud--offline': !telemetry.connected }]"
   >
-    <footer class="hud__bottom">
-      <dl class="panel">
-        <div class="panel__row panel__row--name">
-          <dt>Имя:</dt>
-          <span class="panel__rule"></span>
-          <dd class="panel__name">{{ displayName }}</dd>
-        </div>
-        <div v-for="row in rows" :key="row.label" class="panel__row">
-          <dt>{{ row.label }}:</dt>
-          <dd>
-            {{ row.value }}<span v-if="row.unit" class="panel__unit">{{ row.unit }}</span>
-          </dd>
-        </div>
-      </dl>
-
-      <div class="dials">
-        <svg class="dials__small" viewBox="0 0 80 80" aria-hidden="true">
-          <path class="dials__arc" :d="smallArc" />
+    <div class="hud__bottom">
+      <div class="gauge">
+        <img class="gauge__bot" :src="mascotUrl" alt="" />
+        <svg
+          class="gauge__dial"
+          viewBox="0 0 220 128"
+          role="img"
+          :aria-label="`${speedLabel} км/ч`"
+        >
+          <defs>
+            <radialGradient :id="glowId" cx="50%" cy="100%" r="62%">
+              <stop offset="0%" stop-color="var(--player)" stop-opacity="0.5" />
+              <stop offset="62%" stop-color="var(--player)" stop-opacity="0.08" />
+              <stop offset="100%" stop-color="var(--player)" stop-opacity="0" />
+            </radialGradient>
+            <linearGradient :id="fillId" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="var(--player)" stop-opacity="0.15" />
+              <stop offset="100%" stop-color="var(--player)" stop-opacity="0.55" />
+            </linearGradient>
+          </defs>
+          <ellipse cx="110" cy="120" rx="86" ry="40" :fill="`url(#${glowId})`" />
+          <path v-if="speedWedge" class="gauge__fill" :d="speedWedge" :fill="`url(#${fillId})`" />
           <line
-            v-for="tick in smallTicks"
+            v-for="tick in ticks"
             :key="tick.value"
             :x1="tick.inner.x"
             :y1="tick.inner.y"
             :x2="tick.outer.x"
             :y2="tick.outer.y"
-            class="dials__tick"
-            :class="{ 'dials__tick--major': tick.major }"
+            class="gauge__tick"
+            :class="{ 'gauge__tick--major': tick.major }"
           />
           <text
-            v-for="tick in smallTicks"
+            v-for="tick in ticks"
             v-show="tick.label !== null"
-            :key="`s${tick.value}`"
+            :key="`n${tick.value}`"
             :x="tick.label?.x"
             :y="tick.label?.y"
-            class="dials__num dials__num--small"
+            class="gauge__num"
           >
             {{ tick.value }}
           </text>
-          <polygon class="dials__needle" :points="needlePoints(40, 42, 28, smallNeedleDeg)" />
-          <circle class="dials__hub" cx="40" cy="42" r="2.4" />
-          <text class="dials__caption" x="40" y="72">RPM</text>
-        </svg>
-
-        <svg class="dials__main" viewBox="0 0 100 100" aria-hidden="true">
-          <path class="dials__arc" :d="mainSafeArc" />
-          <path class="dials__arc dials__arc--red" :d="mainRedArc" />
-          <line
-            v-for="tick in mainTicks"
-            :key="tick.value"
-            :x1="tick.inner.x"
-            :y1="tick.inner.y"
-            :x2="tick.outer.x"
-            :y2="tick.outer.y"
-            class="dials__tick"
-            :class="{ 'dials__tick--major': tick.major }"
-          />
-          <text
-            v-for="tick in mainTicks"
-            v-show="tick.label !== null"
-            :key="`m${tick.value}`"
-            :x="tick.label?.x"
-            :y="tick.label?.y"
-            class="dials__num"
-          >
-            {{ tick.value }}
-          </text>
-          <polygon class="dials__needle" :points="needlePoints(50, 50, 36, mainNeedleDeg)" />
-          <circle class="dials__hub" cx="50" cy="50" r="3" />
-          <text class="dials__caption" x="50" y="78">RPM</text>
+          <g class="gauge__needle" :transform="`rotate(${needleDeg} ${CX} ${CY})`">
+            <line :x1="CX" :y1="CY" :x2="CX" :y2="CY - NEEDLE_R" />
+            <circle :cx="CX" :cy="CY" r="4.4" class="gauge__hub" />
+          </g>
+          <text class="gauge__unit" :x="CX" :y="CY - 16">км/ч</text>
         </svg>
       </div>
-    </footer>
+
+      <div class="stats">
+        <p class="stats__nick">
+          <span class="stats__label">Никнейм:</span>
+          <span class="stats__name">{{ displayName }}</span>
+        </p>
+        <p class="stats__row">
+          Скорость: <span class="stats__num">{{ speedLabel }}</span> км/ч
+          <span class="stats__sep" aria-hidden="true">|</span>
+          Расстояние: <span class="stats__num stats__num--km">{{ distanceKm }}</span> км
+        </p>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -192,158 +133,237 @@ const smallTicks = Array.from({ length: 11 }, (_, value) => {
 .hud {
   --player: #{t.$player-1};
 
-  display: grid;
-  grid-template-rows: 1fr auto;
+  position: relative;
   height: 100%;
-  padding: clamp(0.75rem, 2vh, 2rem);
+  padding: clamp(0.45rem, 1.2vh, 1rem) clamp(0.7rem, 1.5vw, 1.35rem);
+  overflow: visible;
   color: #fff;
-  font-family: 'Roboto Condensed', t.$font-stack;
-  font-size: clamp(0.85rem, 2vh, 1.55rem);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+  font-family: t.$font-stack;
+  font-weight: 700;
+  pointer-events: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 18%;
+    pointer-events: none;
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--player) 58%, transparent) 0%,
+      color-mix(in srgb, var(--player) 22%, transparent) 38%,
+      transparent 100%
+    );
+  }
+
+  &--player-1 {
+    .stats__nick {
+      justify-content: end;
+    }
+  }
 
   &--player-2 {
+    .stats__nick {
+      justify-content: start;
+    }
     --player: #{t.$player-2};
+
+    .hud__bottom {
+      flex-direction: row-reverse;
+    }
   }
 
   &--offline {
-    .panel,
-    .dials {
+    .gauge,
+    .stats {
       opacity: 0.45;
     }
   }
 }
 
 .hud__bottom {
+  position: absolute;
+  right: clamp(0.7rem, 1.5vw, 1.35rem);
+  bottom: clamp(0.45rem, 1.2vh, 1rem);
+  left: clamp(0.7rem, 1.5vw, 1.35rem);
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 1em;
+  z-index: 1;
+  gap: 0.35rem;
+  padding-top: 7.4rem;
 }
 
-.panel {
-  min-width: 14em;
-  padding: 0.15em 0.85em 0.25em;
-  background: rgb(0 0 0 / 75%);
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 8px;
-  opacity: 0.8;
+.gauge {
+  position: relative;
+  flex: 0 0 43%;
+  width: 43%;
+  padding: 0.08rem 0.55rem 0.05rem;
+  background: rgb(8 10 14 / 80%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 25px;
+  box-shadow: 0 0 18px rgb(0 0 0 / 35%);
+}
 
-  &__row {
-    display: flex;
-    align-items: baseline;
-    gap: 0.45em;
-    padding: 0.38em 0;
-    border-bottom: 1px solid rgb(255 255 255 / 16%);
+.gauge__bot {
+  position: absolute;
+  z-index: 1;
+  bottom: 100%;
+  width: 34%;
+  height: auto;
+  filter: drop-shadow(0 4px 8px rgb(0 0 0 / 45%));
+  pointer-events: none;
+  transform: translateY(32%);
 
-    &:last-child {
-      border-bottom: none;
-    }
+  .hud--player-1 & {
+    left: 0;
+    transform: translateY(24%);
   }
 
-  &__row--name {
-    border-bottom: 2px solid var(--player);
-  }
-
-  &__rule {
-    flex: 1;
-    height: 1px;
-    background: rgb(255 255 255 / 22%);
-  }
-
-  dt {
-    color: #fff;
-    font-weight: 400;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  dd {
-    margin-left: auto;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  &__name {
-    color: var(--player);
-    font-weight: 600;
-  }
-
-  &__unit {
-    margin-left: 0.28em;
-    font-weight: 400;
-    font-size: 0.82em;
+  .hud--player-2 & {
+    right: 0;
   }
 }
 
-.dials {
-  display: flex;
-  align-items: flex-end;
-  padding: 0.35em 0.45em 0.2em 0.15em;
-  background: rgb(0 0 0 / 75%);
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 10px;
-  opacity: 0.8;
+.gauge__dial {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
 }
 
-.dials__small {
-  width: clamp(4.6rem, 11vh, 8rem);
-  margin-right: -1.1em;
-}
-
-.dials__main {
-  width: clamp(7.2rem, 17vh, 12.5rem);
-}
-
-.dials__arc {
-  fill: none;
-  stroke: var(--player);
-  stroke-width: 3.2;
-  stroke-linecap: butt;
-  filter: drop-shadow(0 0 2px var(--player));
-}
-
-.dials__arc--red {
-  stroke: #dc3232;
-  filter: drop-shadow(0 0 2px #dc3232);
-}
-
-.dials__tick {
-  stroke: #8a6a4a;
-  stroke-width: 0.7;
+.gauge__tick {
+  stroke: rgb(255 255 255 / 52%);
+  stroke-width: 0.85;
+  stroke-linecap: round;
 
   &--major {
-    stroke-width: 1.1;
+    stroke: #fff;
+    stroke-width: 1.55;
   }
 }
 
-.dials__num {
+.gauge__num {
   fill: #fff;
-  font-size: 7px;
-  font-weight: 600;
+  font-family: t.$font-stack;
+  font-size: 8.6px;
+  font-weight: 700;
   text-anchor: middle;
   dominant-baseline: middle;
 }
 
-.dials__num--small {
-  font-size: 8px;
+.gauge__needle line {
+  stroke: #fff;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px var(--player));
 }
 
-.dials__needle {
-  fill: var(--player);
-  filter: drop-shadow(0 0 2.5px var(--player));
+.gauge__hub {
+  fill: #ececec;
+  stroke: var(--player);
+  stroke-width: 1.1;
+  filter: drop-shadow(0 0 3px var(--player));
 }
 
-.dials__hub {
-  fill: #d8d8d8;
-}
-
-.dials__caption {
+.gauge__unit {
   fill: #fff;
-  font-size: 8px;
+  font-family: t.$font-stack;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-anchor: middle;
+}
+
+.stats {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: 4.6rem;
+  padding: 1.15rem 1.15rem 0.55rem 0.75rem;
+  background: rgb(8 10 14 / 80%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 25px;
+  box-shadow: 0 0 18px rgb(0 0 0 / 35%);
+  clip-path: polygon(
+    0% 42%,
+    10% 42%,
+    18% 38%,
+    26% 26%,
+    34% 12%,
+    42% 3%,
+    50% 0%,
+    100% 0%,
+    100% 100%,
+    0% 100%
+  );
+
+  .hud--player-2 & {
+    padding: 1.15rem 0.75rem 0.55rem 1.15rem;
+    clip-path: polygon(
+      0% 0%,
+      50% 0%,
+      58% 3%,
+      66% 12%,
+      74% 26%,
+      82% 38%,
+      90% 42%,
+      100% 42%,
+      100% 100%,
+      0% 100%
+    );
+  }
+}
+
+.stats__nick,
+.stats__row {
+  margin: 0;
+}
+
+.stats__nick {
+  display: flex;
+  gap: 0.4em;
+  align-items: baseline;
+  padding-bottom: 0.32em;
+  margin-bottom: 0.38em;
+  border-bottom: 2px solid var(--player);
+  font-size: clamp(0.9rem, 1.9vh, 1.15rem);
+  display: flex;
+}
+
+.stats__label {
+  color: #fff;
+}
+
+.stats__name {
+  color: var(--player);
+  font-weight: 700;
+}
+
+.stats__row {
+  color: #fff;
+  font-size: clamp(0.68rem, 1.35vw, 0.92rem);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  white-space: nowrap;
+}
+
+.stats__num {
+  display: inline-block;
+  min-width: 4ch;
+  text-align: right;
+
+  &--km {
+    min-width: 3.6ch;
+  }
+}
+
+.stats__sep {
+  margin: 0 0.28em;
+  color: rgb(255 255 255 / 55%);
 }
 </style>

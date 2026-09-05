@@ -2,6 +2,7 @@
 // Всё остальное описывают компоненты, подключая theme.scss.
 
 @use 'reset';
+@use 'fonts';
 @use 'theme' as t;
 
 html {

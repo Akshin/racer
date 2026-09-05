@@ -49,7 +49,7 @@ const name = computed(() => props.nick || `Игрок ${props.index + 1}`)
   height: 100%;
   padding: 8vh 1.25rem 18vh;
   color: #fff;
-  font-family: 'Roboto Condensed', t.$font-stack;
+  font-family: t.$font-stack;
   text-align: center;
   text-shadow:
     0 2px 0 rgb(0 0 0 / 35%),

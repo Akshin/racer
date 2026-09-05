@@ -45,11 +45,9 @@ const frozenTelemetry = ref<PlayerTelemetry[] | null>(null)
 
 const remainingMs = computed(() => Math.max(0, RACE_DURATION_MS - elapsedMs.value))
 
-const timerLabel = computed(() => {
-  const seconds = Math.floor(remainingMs.value / 1000)
-  const minutes = Math.floor(seconds / 60)
-  return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
-})
+const timerLabel = computed(() =>
+  String(Math.floor(remainingMs.value / 1000)).padStart(2, '0'),
+)
 
 const lanes = computed<LaneHud[]>(() =>
   session.playerChecks.map((check, index) => {
@@ -121,7 +119,7 @@ function startClock(): void {
     finished = true
     racing.value = false
     window.clearInterval(clock)
-    void finish()
+    // void finish()
   }, CLOCK_STEP_MS)
 }
 
@@ -252,21 +250,35 @@ onBeforeUnmount(() => {
   top: 0.55rem;
   left: 50%;
   z-index: 5;
-  padding: 0.2em 0.75em 0.15em;
-  color: #7af0ff;
-  font-family: 'Roboto Condensed', sans-serif;
-  font-size: clamp(1.35rem, 3.4vh, 2.5rem);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.14em;
-  background: rgb(8 10 14 / 72%);
-  border: 1px solid rgb(80 220 255 / 40%);
-  border-radius: 6px;
-  box-shadow: 0 0 12px rgb(80 220 255 / 18%);
-  text-shadow: 0 0 10px rgb(80 220 255 / 85%);
+  min-width: 2.35em;
+  padding: 0.32em 0.38em 0.4em;
+  color: #fff;
+  font-family: t.$font-digital;
+  font-size: clamp(2.8rem, 7.4vh, 4.8rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-align: center;
+  background: rgb(8 10 14 / 78%);
+  border-radius: 22px;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 40%);
   transform: translateX(-50%);
-  transform-origin: center top;
-  animation: timer-pop 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: 22%;
+    bottom: 0.28em;
+    left: 22%;
+    height: 3px;
+    border-radius: 2px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      t.$player-1 0 50%,
+      t.$player-2 50% 100%
+    );
+  }
 }
 
 .stage__lanes {
@@ -316,7 +328,7 @@ onBeforeUnmount(() => {
 .stage__countdown-text {
   margin: 0;
   color: var(--player);
-  font-family: 'Roboto Condensed', sans-serif;
+  font-family: t.$font-stack;
   font-size: clamp(5.5rem, 22vh, 12rem);
   font-weight: 800;
   line-height: 0.9;
@@ -331,23 +343,6 @@ onBeforeUnmount(() => {
   &--go {
     font-size: clamp(2.2rem, 8vh, 5.4rem);
     letter-spacing: 0.12em;
-  }
-}
-
-@keyframes timer-pop {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) scale(3.2);
-  }
-
-  55% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1.08);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1);
   }
 }
 

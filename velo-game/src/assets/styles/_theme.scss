@@ -19,11 +19,13 @@ $player-2: #ff4b4b;
 
 $radius: 10px;
 $font-stack:
+  'VK Sans Display',
   system-ui,
   -apple-system,
   'Segoe UI',
   sans-serif;
 $font-mono: ui-monospace, monospace;
+$font-digital: 'E1234', ui-monospace, monospace;
 
 /// Обычная кнопка. Модификатор «главного действия» — в button-primary.
 @mixin button {
