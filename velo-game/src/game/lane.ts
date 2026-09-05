@@ -59,6 +59,8 @@ import {
   DASH_LENGTH_M,
   DASH_PERIOD_M,
   DISTANCE_CATCHUP,
+  DISTANCE_CATCHUP_MAX_MS,
+  DISTANCE_CATCHUP_MAX_SPEED_GAP,
   FLAG_ANCHOR_X,
   FLAG_CLUSTER_SLOTS,
   FLAG_DISTANCE_M,
@@ -78,6 +80,7 @@ import {
   ROAD_DISTANCE_M,
   ROAD_WIDTH_M,
   SPEED_SCALE,
+  SPEED_TAU_ACCEL_MS,
   SPEED_TAU_MS,
   COAST_TAU_MS,
   SUN_CONTENT_BOTTOM,
@@ -136,6 +139,8 @@ export class Lane {
   #traveled = 0
   /** Пока true — не догоняем дистанцию адаптера: она могла накопиться на отсчёте. */
   #ignoreAdapterDistance = true
+  /** Первый кадр после «поехали»: сразу берём скорость с ноды, не разгоняемся с нуля. */
+  #snapSpeedOnStart = false
   /** Множитель визуальной скорости: меняется со страницы проверки без перезапуска. */
   #visualScale = SPEED_SCALE
   /** Длина заезда в метрах адаптера — финишные флаги стоят на visualScale × этом числе. */
@@ -254,16 +259,27 @@ export class Lane {
   update(deltaMs: number, telemetry: PlayerTelemetry, visualScale: number, raceDistanceM: number): void {
     // Скорость с адаптера уже сглажена, но при потере датчика падает в ноль
     // мгновенно — своё сглаживание нужно, чтобы дорога замирала плавно.
-    const catchUp = 1 - Math.exp(-deltaMs / SPEED_TAU_MS)
-    this.#speed += (telemetry.speed - this.#speed) * catchUp
+    if (this.#snapSpeedOnStart) {
+      this.#speed = telemetry.speed
+      this.#snapSpeedOnStart = false
+    } else {
+      const tau = telemetry.speed > this.#speed ? SPEED_TAU_ACCEL_MS : SPEED_TAU_MS
+      const catchUp = 1 - Math.exp(-deltaMs / tau)
+      this.#speed += (telemetry.speed - this.#speed) * catchUp
+    }
     this.#traveled += this.#speed * KMH_TO_MS * (deltaMs / 1000)
 
     // После «поехали» адаптер ещё кадр-два шлёт старую дистанцию. Если догнать —
     // дорога прыгнет вперёд, как будто гонка шла на отсчёте.
     if (this.#ignoreAdapterDistance) {
       if (telemetry.distance <= this.#traveled + 1.5) this.#ignoreAdapterDistance = false
-    } else if (telemetry.distance > this.#traveled) {
-      this.#traveled += (telemetry.distance - this.#traveled) * DISTANCE_CATCHUP
+    } else if (
+      telemetry.distance > this.#traveled &&
+      Math.abs(telemetry.speed - this.#speed) <= DISTANCE_CATCHUP_MAX_SPEED_GAP
+    ) {
+      const gap = telemetry.distance - this.#traveled
+      const capped = DISTANCE_CATCHUP_MAX_MS * (deltaMs / 1000)
+      this.#traveled += Math.min(gap * DISTANCE_CATCHUP, capped)
     }
 
     this.#offline.visible = !telemetry.connected
@@ -292,6 +308,7 @@ export class Lane {
     this.#speed = 0
     this.#traveled = 0
     this.#ignoreAdapterDistance = true
+    this.#snapSpeedOnStart = true
     this.#drawTrees()
     this.#drawFlags()
     this.#drawBanners()

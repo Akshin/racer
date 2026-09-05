@@ -119,12 +119,18 @@ export const CYCLIST_ANIM_SPEED = 16 / 60
 export const COLOR_METAL = 0x2a2e33
 export const COLOR_METAL_LIT = 0x4a5158
 
-/** Постоянная времени разгона/остановки дороги. При потере датчика она замирает за ~2τ. */
-export const SPEED_TAU_MS = 400
+/** Разгон дороги и педалей. Короткий τ — старт не «ватный». */
+export const SPEED_TAU_ACCEL_MS = 45
+/** Торможение чуть мягче разгона, чтобы датчик не дёргал анимацию. */
+export const SPEED_TAU_MS = 140
 /** После финиша дорога выкатывается к нулю медленнее, чем при потере датчика. */
 export const COAST_TAU_MS = 1600
-/** Какую долю отставания от дистанции адаптера догоняем за кадр. */
-export const DISTANCE_CATCHUP = 0.08
+/** Доля долга дистанции за кадр. Большое значение рвёт асфальт из-под ног. */
+export const DISTANCE_CATCHUP = 0.012
+/** Догоняем адаптер, только когда своя скорость уже почти совпала, км/ч. */
+export const DISTANCE_CATCHUP_MAX_SPEED_GAP = 2
+/** Потолок догона, м/с — без скачка даже на большом долге. */
+export const DISTANCE_CATCHUP_MAX_MS = 0.35
 
 export const COLOR_SKY_TOP = 0x7a7b8e
 export const COLOR_SKY_MID = 0xcbb6b4

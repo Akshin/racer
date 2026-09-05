@@ -162,6 +162,9 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
     .stats__nick {
       justify-content: end;
     }
+    .stats__row {
+      text-align: right;
+    }
   }
 
   &--player-2 {

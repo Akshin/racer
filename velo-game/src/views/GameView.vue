@@ -45,9 +45,7 @@ const frozenTelemetry = ref<PlayerTelemetry[] | null>(null)
 
 const remainingMs = computed(() => Math.max(0, RACE_DURATION_MS - elapsedMs.value))
 
-const timerLabel = computed(() =>
-  String(Math.floor(remainingMs.value / 1000)).padStart(2, '0'),
-)
+const timerLabel = computed(() => String(Math.floor(remainingMs.value / 1000)).padStart(2, '0'))
 
 const lanes = computed<LaneHud[]>(() =>
   session.playerChecks.map((check, index) => {
@@ -119,7 +117,7 @@ function startClock(): void {
     finished = true
     racing.value = false
     window.clearInterval(clock)
-    // void finish()
+    void finish()
   }, CLOCK_STEP_MS)
 }
 
@@ -273,11 +271,7 @@ onBeforeUnmount(() => {
     height: 3px;
     border-radius: 2px;
     pointer-events: none;
-    background: linear-gradient(
-      90deg,
-      t.$player-1 0 50%,
-      t.$player-2 50% 100%
-    );
+    background: linear-gradient(90deg, t.$player-1 0 50%, t.$player-2 50% 100%);
   }
 }
 

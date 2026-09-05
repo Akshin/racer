@@ -46,6 +46,6 @@ export function loadConfig(): Config {
     wheelCircumferenceM: num('WHEEL_CIRCUMFERENCE_M', 2.096),
     gearRatio: num('GEAR_RATIO', 3),
     sensorTimeoutMs: num('SENSOR_TIMEOUT_MS', 2000),
-    smoothingTauMs: num('SMOOTHING_TAU_MS', 350),
+    smoothingTauMs: num('SMOOTHING_TAU_MS', 120),
   };
 }
