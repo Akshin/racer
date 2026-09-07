@@ -12,12 +12,22 @@ const router = createRouter({
       component: () => import('@/views/LeaderboardView.vue'),
     },
     {
+      path: '/start',
+      name: 'start',
+      component: () => import('@/views/StartView.vue'),
+    },
+    {
       path: '/game',
       name: 'game',
       component: () => import('@/views/GameView.vue'),
       // Без пройденной проверки экран гонки бесполезен — возвращаем на страницу проверки.
       // Смотрим на `canRace`, а не на `ready`: после F5 соединение поднимается не мгновенно.
-      beforeEnter: () => (useSessionStore().canRace ? true : { name: 'setup' }),
+      beforeEnter: (to) => {
+        if (import.meta.env.DEV && (to.query.popup === 'finish' || to.query.popup === 'over')) {
+          return true
+        }
+        return useSessionStore().canRace ? true : { name: 'setup' }
+      },
     },
   ],
 })

@@ -2,12 +2,13 @@
 
 import shutil
 
-from common import GAME_RACE_DIR, NOBG_DIR, RACERS
+from common import GAME_RACE_DIR, NOBG_DIR, racers_from_args
 
 
-def main() -> None:
+def main(racers: tuple[str, ...] | None = None) -> None:
+    selected = racers or racers_from_args()
     GAME_RACE_DIR.mkdir(parents=True, exist_ok=True)
-    for racer in RACERS:
+    for racer in selected:
         src = NOBG_DIR / racer
         frames = sorted(src.glob("*.png"))
         if not frames:

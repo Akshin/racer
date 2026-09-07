@@ -89,8 +89,8 @@ declare global {
 
   type SensorInfo = { sensorId: string; name: string }
 
-  /** Выбранный на лидерборде гонщик. null — аноним, результат в БД не пишем. */
-  type RaceRacer = { id: string; nick: string } | null
+  /** Выбранный на экране старта гонщик. null — слот пуст, результат в БД не пишем. */
+  type RaceRacer = { id: string; nick: string; gender: 'male' | 'female' } | null
 
   /** Всё, что нужно знать про одного игрока на странице проверки. */
   type PlayerCheck = {
@@ -132,7 +132,7 @@ declare global {
     telemetry: PlayerTelemetry
     sensor: SensorInfo | null
     elapsedMs: number
-    /** Ник с лидерборда. Если нет — HUD пишет «Игрок N». */
+    /** Ник с экрана старта. Если нет — HUD пишет «Игрок N». */
     nick: string | null
   }
 

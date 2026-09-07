@@ -70,18 +70,37 @@ export function raceSprite(alias: string): Sprite | null {
   return new Sprite({ texture })
 }
 
-/** Кадры атласа `trees` по имени, пустой массив если атласа нет. */
+/** Кадры атласа по имени, пустой массив если атласа нет. */
 export function raceSheetTextures(alias: string): Texture[] {
-  let sheet: Spritesheet | undefined
-  try {
-    sheet = Assets.get<Spritesheet>(alias)
-  } catch {
-    return []
+  const sheet = getSheet(alias)
+  if (sheet == null) return []
+  const fromAnim = sheet.animations?.[alias]
+  const list =
+    fromAnim != null && fromAnim.length > 0 ? fromAnim : orderedSheetTextures(sheet, alias)
+  return list.filter((texture): texture is Texture => textureUsable(texture) && texture.width > 0)
+}
+
+function getSheet(alias: string): Spritesheet | null {
+  for (const key of [alias, `race/${alias}`]) {
+    try {
+      const value = Assets.get(key) as Spritesheet | undefined
+      if (value != null && value.textures != null) return value
+    } catch {
+      // Нет такого алиаса.
+    }
   }
-  if (sheet?.textures == null) return []
+  return null
+}
+
+function orderedSheetTextures(sheet: Spritesheet, alias: string): Texture[] {
   const frames = sheet.textures
-  return Object.keys(frames)
+  const prefix = `${alias}_`
+  const keys = Object.keys(frames)
+    .filter((name) => name === alias || name.startsWith(prefix))
     .sort()
-    .map((name) => frames[name])
-    .filter((texture): texture is Texture => textureUsable(texture) && texture.width > 0)
+  const names = keys.length > 0 ? keys : Object.keys(frames).sort()
+  return names.flatMap((name) => {
+    const texture = frames[name]
+    return texture === undefined ? [] : [texture]
+  })
 }

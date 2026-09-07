@@ -107,6 +107,38 @@
         },
         {
           "alias": [
+            "race/racer3",
+            "racer3"
+          ],
+          "src": [
+            "race/racer3.webp.json",
+            "race/racer3.png.json"
+          ],
+          "data": {
+            "tags": {
+              "m": true,
+              "tps": true
+            }
+          }
+        },
+        {
+          "alias": [
+            "race/racer4",
+            "racer4"
+          ],
+          "src": [
+            "race/racer4.webp.json",
+            "race/racer4.png.json"
+          ],
+          "data": {
+            "tags": {
+              "m": true,
+              "tps": true
+            }
+          }
+        },
+        {
+          "alias": [
             "race/trees",
             "trees"
           ],

@@ -1,65 +1,39 @@
 <script setup lang="ts">
 /**
- * Лидерборд зала: таблица рекордов и выбор двух гонщиков перед стартом.
- * Список юзеров опрашивается каждые 2 с. Новый зарегистрированный
- * сразу попадает в свободный селект и становится выбранным.
+ * Турнирная таблица зала в киосковой рамке.
+ * Скорость считаем из лучшего заезда за минуту: метры / время.
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { getUsers, sortUsersByCreatedAt, sortUsersByMeters, type VeloUser } from '@/net/usersApi'
-import { useSessionStore } from '@/stores/session'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { RACE_DURATION_MS } from '@/game/config'
+import { getUsers, sortUsersByMeters, type VeloUser } from '@/net/usersApi'
 
 const POLL_MS = 2000
-
-const session = useSessionStore()
-const router = useRouter()
+const PAGE_SIZE = 10
+const HOURS = RACE_DURATION_MS / 3_600_000
 
 const users = ref<VeloUser[]>([])
-const p1 = ref('')
-const p2 = ref('')
 const loadError = ref('')
+const page = ref(1)
 
-const seenIds = new Set<string>()
-let hydrated = false
 let inflight = false
 let poll: number | undefined
 
 const leaders = computed(() => sortUsersByMeters(users.value))
-const selectUsers = computed(() => sortUsersByCreatedAt(users.value))
-
-function pickRacer(id: string): RaceRacer {
-  if (id === '') return null
-  const user = users.value.find((entry) => entry.id === id)
-  return user === undefined ? null : { id: user.id, nick: user.nick }
-}
-
-function assignNewcomers(next: VeloUser[]): void {
-  const newcomers = next
-    .filter((user) => !seenIds.has(user.id))
-    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
-
-  for (const user of next) seenIds.add(user.id)
-
-  if (!hydrated) {
-    hydrated = true
-    return
-  }
-
-  for (const user of newcomers) {
-    if (p1.value === '') p1.value = user.id
-    else if (p2.value === '' && p1.value !== user.id) p2.value = user.id
-  }
-}
+const pageCount = computed(() => Math.max(1, Math.ceil(leaders.value.length / PAGE_SIZE)))
+const pageRows = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE
+  return leaders.value.slice(start, start + PAGE_SIZE)
+})
+const bikeLeft = computed(() => {
+  if (pageCount.value <= 1) return '12%'
+  return `${((page.value - 1) / (pageCount.value - 1)) * 100}%`
+})
 
 async function refresh(): Promise<void> {
   if (inflight) return
   inflight = true
   try {
-    const next = await getUsers()
-    if (p1.value !== '' && !next.some((user) => user.id === p1.value)) p1.value = ''
-    if (p2.value !== '' && !next.some((user) => user.id === p2.value)) p2.value = ''
-    assignNewcomers(next)
-    users.value = next
+    users.value = await getUsers()
     loadError.value = ''
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : String(error)
@@ -68,14 +42,34 @@ async function refresh(): Promise<void> {
   }
 }
 
-function formatMeters(meters: number | null): string {
-  return meters === null ? '—' : `${Math.round(meters)}`
+function formatRank(index: number): string {
+  return String((page.value - 1) * PAGE_SIZE + index + 1).padStart(4, '0')
 }
 
-function startRace(): void {
-  session.setRacers(pickRacer(p1.value), pickRacer(p2.value))
-  void router.push({ name: 'game' })
+function formatSpeed(meters: number | null): string {
+  if (meters === null) return '—'
+  return `${Math.round(meters / 1000 / HOURS)} км/ч`
 }
+
+function formatDistance(meters: number | null): string {
+  if (meters === null) return '—'
+  return `${(meters / 1000).toFixed(2)} км`
+}
+
+function goPage(next: number): void {
+  page.value = Math.min(pageCount.value, Math.max(1, next))
+}
+
+function onSliderClick(event: MouseEvent): void {
+  const track = event.currentTarget as HTMLElement
+  const x = event.clientX - track.getBoundingClientRect().left
+  const ratio = track.clientWidth <= 0 ? 0 : Math.min(1, Math.max(0, x / track.clientWidth))
+  goPage(Math.round(ratio * (pageCount.value - 1)) + 1)
+}
+
+watch(pageCount, (count) => {
+  if (page.value > count) page.value = count
+})
 
 onMounted(() => {
   void refresh()
@@ -89,217 +83,306 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="page">
-    <header class="head">
-      <div>
-        <h1>Лидерборд</h1>
-        <p class="muted">Кто проехал больше метров за минуту.</p>
+    <div class="frame frame--red">
+      <div class="frame frame--blue">
+        <div class="stage">
+          <div class="hero">
+            <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+            <p class="bubble">Наша турнирная таблица</p>
+            <img class="mascot" src="@/assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
+          </div>
+
+          <section class="board">
+            <p v-if="loadError" class="banner" role="alert">{{ loadError }}</p>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="rank">Позиция</th>
+                    <th>Никнейм</th>
+                    <th class="num">Средняя скорость</th>
+                    <th class="num">Макс. Расстояние</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(user, index) in pageRows" :key="user.id">
+                    <td class="rank">{{ formatRank(index) }}</td>
+                    <td class="nick">{{ user.nick }}</td>
+                    <td class="num">{{ formatSpeed(user.meters) }}</td>
+                    <td class="num">{{ formatDistance(user.meters) }}</td>
+                  </tr>
+                  <tr v-if="pageRows.length === 0">
+                    <td colspan="4" class="empty">Пока никого нет</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="foot">
+              <button
+                class="slider"
+                type="button"
+                :disabled="pageCount <= 1"
+                @click="onSliderClick"
+              >
+                <span class="slider__line" />
+                <img
+                  class="slider__bike"
+                  src="@/assets/images/white_biker.png"
+                  alt=""
+                  draggable="false"
+                  :style="{ left: bikeLeft }"
+                />
+              </button>
+              <div class="foot__meta">
+                <RouterLink class="start" to="/start">Начать игру</RouterLink>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
-      <RouterLink class="ghost" to="/">Проверка датчиков</RouterLink>
-    </header>
-
-    <p v-if="loadError" class="error">{{ loadError }}</p>
-
-    <div class="layout">
-      <section class="card board">
-        <table>
-          <thead>
-            <tr>
-              <th class="rank">#</th>
-              <th>Ник</th>
-              <th class="num">Метры</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(user, index) in leaders" :key="user.id">
-              <td class="rank">{{ index + 1 }}</td>
-              <td class="nick">{{ user.nick }}</td>
-              <td class="num">{{ formatMeters(user.meters) }}</td>
-            </tr>
-            <tr v-if="leaders.length === 0">
-              <td colspan="3" class="muted empty">Пока никого нет</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <section class="card start">
-        <strong>Новый заезд</strong>
-        <p class="muted">
-          Пустые селекты — анонимные гонщики, результат в таблицу не пишется. Новый
-          зарегистрированный сам встаёт в свободный слот.
-        </p>
-
-        <label>
-          Тренажёр 1
-          <select v-model="p1">
-            <option value="">Аноним</option>
-            <option
-              v-for="user in selectUsers"
-              :key="user.id"
-              :value="user.id"
-              :disabled="user.id === p2"
-            >
-              {{ user.nick }}
-            </option>
-          </select>
-        </label>
-
-        <label>
-          Тренажёр 2
-          <select v-model="p2">
-            <option value="">Аноним</option>
-            <option
-              v-for="user in selectUsers"
-              :key="user.id"
-              :value="user.id"
-              :disabled="user.id === p1"
-            >
-              {{ user.nick }}
-            </option>
-          </select>
-        </label>
-
-        <button class="primary wide" :disabled="!session.canRace" @click="startRace">
-          Начать заезд
-        </button>
-        <ul v-if="session.blockers.length" class="blockers">
-          <li v-for="blocker in session.blockers" :key="blocker">{{ blocker }}</li>
-        </ul>
-      </section>
     </div>
   </main>
 </template>
 
 <style scoped lang="scss">
-@use '@/assets/styles/theme' as t;
-
-button {
-  @include t.button;
-
-  &.primary {
-    @include t.button-primary;
-  }
-}
-
-select {
-  @include t.field;
-  width: 100%;
-}
+$red: #ff2b42;
+$blue: #0077ff;
+$navy: #07101c;
+$grid: rgba(90, 170, 255, 0.45);
 
 .page {
-  display: grid;
-  gap: 1.25rem;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 2rem 1rem 3rem;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100dvh;
+  padding: clamp(10px, 2.2vh, 28px);
+  overflow: hidden;
+  background: $navy;
+  box-shadow: 0 0 182px 0 #0040ff inset;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
+.frame {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border-radius: clamp(14px, 2.2vw, 25px);
 
-  h1 {
-    font-size: 1.75rem;
+  &--red {
+    padding: clamp(8px, 1.6vh, 22px);
+    border: clamp(4px, 0.8vw, 9px) solid $red;
+    box-shadow: 0 0 24px rgba($red, 0.35);
+  }
+
+  &--blue {
+    overflow: visible;
+    padding: clamp(10px, 2vh, 28px) clamp(14px, 2.2vw, 32px) clamp(10px, 1.6vh, 20px);
+    border: clamp(3px, 0.6vw, 7px) solid $blue;
+    box-shadow: 0 0 18px rgba($blue, 0.28);
   }
 }
 
-.muted {
-  color: t.$muted;
-}
-
-.error {
-  color: t.$error;
-}
-
-.ghost {
-  @include t.button;
-  text-decoration: none;
-}
-
-.layout {
+.stage {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.9fr);
-  gap: 1rem;
-  align-items: start;
+  grid-template-columns: minmax(0, 0.38fr) minmax(0, 1fr);
+  gap: clamp(8px, 1.6vw, 24px);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
 
-  @media (max-width: 800px) {
-    grid-template-columns: 1fr;
+.hero {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.logo {
+  position: relative;
+  z-index: 2;
+  width: min(100%, clamp(140px, 16vw, 210px));
+  height: auto;
+}
+
+.bubble {
+  position: relative;
+  z-index: 2;
+  max-width: min(100%, 16rem);
+  margin: clamp(10px, 2vh, 22px) 0 0 0;
+  padding: clamp(12px, 1.8vh, 18px) clamp(14px, 1.6vw, 22px);
+  color: #fff;
+  font-size: clamp(0.95rem, 1.4vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.3;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #003180 0%, #4c9ef8 50%, #9cbefb 100%);
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 22%;
+    bottom: -12px;
+    border: 9px solid transparent;
+    border-top-color: #6aa9f4;
+    border-bottom-width: 0;
   }
 }
 
-.card {
-  @include t.card;
+.mascot {
+  position: absolute;
+  left: calc(-1 * clamp(18px, 3.2vw, 40px));
+  bottom: calc(-1 * clamp(8px, 1.8vh, 22px));
+  z-index: 2;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 86%;
+  object-fit: contain;
+  object-position: left bottom;
+  pointer-events: none;
+  user-select: none;
 }
 
 .board {
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.6vh, 18px);
+  min-width: 0;
+  min-height: 0;
+  z-index: 3;
+}
+
+.banner {
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  color: #ffd0d5;
+  background: rgba($red, 0.18);
+  border-radius: 12px;
+}
+
+.table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
-  max-height: calc(100dvh - 10rem);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 1.15rem;
+  font-size: clamp(0.82rem, 1.15vw, 1.05rem);
 }
 
 th,
 td {
-  padding: 0.85rem 1.1rem;
-  border-bottom: 1px solid t.$border;
+  padding: clamp(0.45rem, 1.1vh, 0.75rem) clamp(0.5rem, 1.1vw, 0.9rem);
+  border: 1px solid $grid;
   text-align: left;
+  white-space: nowrap;
 }
 
 th {
-  position: sticky;
-  top: 0;
-  color: t.$muted;
-  font-size: 0.85rem;
+  color: #fff;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: t.$surface;
 }
 
 .rank {
-  width: 3.5rem;
-  color: t.$muted;
+  width: 7.5rem;
   font-variant-numeric: tabular-nums;
 }
 
 .num {
-  text-align: right;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
 }
 
 .nick {
-  font-size: 1.25rem;
   font-weight: 600;
 }
 
 .empty {
   text-align: center;
+  color: rgba(255, 255, 255, 0.55);
 }
 
-.start {
-  label {
-    display: grid;
-    gap: 0.35rem;
+.foot {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.slider {
+  position: relative;
+  width: 100%;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
   }
 }
 
-.wide {
-  width: 100%;
-  padding: 0.75rem;
+.slider__line {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.92);
+  transform: translateY(-50%);
 }
 
-.blockers {
-  padding-left: 1.25rem;
-  color: t.$warn;
-  font-size: 0.9rem;
+.slider__bike {
+  position: absolute;
+  top: 50%;
+  width: auto;
+  height: 28px;
+  mix-blend-mode: screen;
+  transform: translate(-20%, -50%);
+  pointer-events: none;
+}
+
+.foot__meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.start {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: clamp(10.5rem, 18vw, 14rem);
+  height: clamp(44px, 6vh, 54px);
+  padding: 0 1.4rem;
+  color: #fff;
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  font-weight: 700;
+  text-decoration: none;
+  background: $red;
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba($red, 0.45);
+
+  &:active {
+    filter: brightness(0.92);
+  }
+}
+
+@media (orientation: portrait) {
+  .stage {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(160px, 28vh) minmax(0, 1fr);
+  }
+
+  .mascot {
+    left: -12px;
+    max-width: 70%;
+    max-height: 92%;
+  }
 }
 </style>

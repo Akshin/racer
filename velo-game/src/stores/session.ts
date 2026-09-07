@@ -5,6 +5,7 @@
 
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
+import { racerSheetAlias } from '@/game/racerAlias'
 import { PLAYER_IDS, PROTOCOL_VERSION } from '@/net/protocol'
 import { TelemetryClient } from '@/net/telemetryClient'
 import { useSettingsStore } from '@/stores/settings'
@@ -17,6 +18,26 @@ const URL_STORAGE_KEY = 'velo:ws-url'
 const CONNECT_STORAGE_KEY = 'velo:connect'
 /** Проверка датчиков пройдена. Живёт до закрытия вкладки, чтобы F5 не выбивал из гонки. */
 const VERIFIED_STORAGE_KEY = 'velo:verified'
+/** Гонщики и атласы с экрана старта — чтобы спрайт не терялся при переходе на /game. */
+const RACERS_STORAGE_KEY = 'velo:racers'
+
+type StoredRacers = {
+  racers: [RaceRacer, RaceRacer]
+  sheets: [string, string]
+}
+
+function readStoredRacers(): StoredRacers | null {
+  try {
+    const raw = window.sessionStorage.getItem(RACERS_STORAGE_KEY)
+    if (raw == null) return null
+    const parsed = JSON.parse(raw) as Partial<StoredRacers>
+    if (!Array.isArray(parsed.racers) || parsed.racers.length !== 2) return null
+    if (!Array.isArray(parsed.sheets) || parsed.sheets.length !== 2) return null
+    return { racers: parsed.racers as [RaceRacer, RaceRacer], sheets: parsed.sheets as [string, string] }
+  } catch {
+    return null
+  }
+}
 
 function emptyChecks(): Record<PlayerId, PlayerCheck> {
   const entries = PLAYER_IDS.map((id) => [
@@ -46,8 +67,11 @@ export const useSessionStore = defineStore('session', () => {
   const tickHz = ref(0)
   const metersPerCrankRev = ref(0)
   const lastTelemetryAt = ref(0)
-  /** Кто едет в текущем заезде. Задаётся на лидерборде перед стартом. */
-  const racers = ref<[RaceRacer, RaceRacer]>([null, null])
+  const storedRacers = readStoredRacers()
+  /** Кто едет в текущем заезде. Задаётся на экране старта. */
+  const racers = ref<[RaceRacer, RaceRacer]>(storedRacers?.racers ?? [null, null])
+  /** Атласы велосипедистов: считаются по полу на старте, не из пустого слота. */
+  const racerSheets = ref<[string, string]>(storedRacers?.sheets ?? ['racer1', 'racer2'])
 
   // Часы для проверки «данные ещё идут»: дают шкале обновляться без новых сообщений.
   const now = ref(Date.now())
@@ -192,9 +216,17 @@ export const useSessionStore = defineStore('session', () => {
     log('info', 'Отправлен сброс дистанции')
   }
 
-  /** Назначить гонщиков перед входом на экран заезда. */
-  function setRacers(p1: RaceRacer, p2: RaceRacer): void {
+  /** Назначить гонщиков перед входом на экран заезда. sheets — атласы с экрана старта. */
+  function setRacers(p1: RaceRacer, p2: RaceRacer, sheets?: readonly string[]): void {
     racers.value = [p1, p2]
+    racerSheets.value = [
+      sheets?.[0] ?? racerSheetAlias(0, p1?.gender),
+      sheets?.[1] ?? racerSheetAlias(1, p2?.gender),
+    ]
+    window.sessionStorage.setItem(
+      RACERS_STORAGE_KEY,
+      JSON.stringify({ racers: racers.value, sheets: racerSheets.value }),
+    )
   }
 
   function clearLogs(): void {
@@ -213,6 +245,7 @@ export const useSessionStore = defineStore('session', () => {
     ready,
     canRace,
     racers,
+    racerSheets,
     connect,
     disconnect,
     resetRace,

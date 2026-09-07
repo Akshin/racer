@@ -5,8 +5,9 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
-import FinishCard from '@/components/FinishCard.vue'
+import FinishPopup from '@/components/FinishPopup.vue'
 import RaceHud from '@/components/RaceHud.vue'
+import RaceOverPopup from '@/components/RaceOverPopup.vue'
 import { createGame } from '@/game'
 import { RACE_DURATION_MS } from '@/game/config'
 import { getUsers, placeForMeters, setUserMeters } from '@/net/usersApi'
@@ -17,8 +18,10 @@ import { useSettingsStore } from '@/stores/settings'
 const CLOCK_STEP_MS = 250
 /** Надпись выходит, когда дорога уже заметно выкатилась. */
 const FINISH_REVEAL_MS = 1200
-/** Сколько держим «это было круто» перед возвратом на лидерборд. */
-const FINISH_HOLD_MS = 4000
+/** Первый попап: «Финиш!» и победитель. */
+const FINISH_WIN_MS = 3500
+/** Второй попап: «Гонка закончена!» перед лидербордом. */
+const FINISH_HOLD_MS = 4500
 /** Один такт отсчёта: появление и уход цифры / «поехали». */
 const COUNTDOWN_BEAT_MS = 950
 const COUNTDOWN_STEPS = ['Готовы?', '3', '2', '1', 'Поехали'] as const
@@ -40,6 +43,7 @@ const racing = ref(false)
 const coasting = ref(false)
 const countdownText = ref<string | null>(null)
 const showFinish = ref(false)
+const finishStep = ref<1 | 2>(1)
 const finishes = ref<LaneFinish[]>([])
 const frozenTelemetry = ref<PlayerTelemetry[] | null>(null)
 
@@ -60,11 +64,25 @@ const lanes = computed<LaneHud[]>(() =>
   }),
 )
 
+const winnerName = computed(() => {
+  if (finishes.value.length === 0) return 'Игрок 1'
+  const winner = finishes.value.reduce((best, row) => (row.meters > best.meters ? row : best))
+  return winner.nick || `Игрок ${winner.index + 1}`
+})
+
+const racerNames = computed(() => {
+  const names = session.racers.flatMap((racer, index) =>
+    racer == null ? [] : [racer.nick || `Игрок ${index + 1}`],
+  )
+  return names.length > 0 ? names : ['Игрок 1']
+})
+
 let game: Game | null = null
 /** Инициализация асинхронная — компонент могли закрыть, не дождавшись её. */
 let closed = false
 let clock: number | undefined
 let reveal: number | undefined
+let toSecond: number | undefined
 let leave: number | undefined
 let countdownBeat: number | undefined
 let finished = false
@@ -102,9 +120,14 @@ async function finish(): Promise<void> {
   reveal = window.setTimeout(() => {
     if (closed) return
     showFinish.value = true
-    leave = window.setTimeout(() => {
-      if (!closed) void router.push({ name: 'leaderboard' })
-    }, FINISH_HOLD_MS)
+    finishStep.value = 1
+    toSecond = window.setTimeout(() => {
+      if (closed) return
+      finishStep.value = 2
+      leave = window.setTimeout(() => {
+        if (!closed) void router.push({ name: 'leaderboard' })
+      }, FINISH_HOLD_MS)
+    }, FINISH_WIN_MS)
   }, FINISH_REVEAL_MS)
 }
 
@@ -141,8 +164,22 @@ function playCountdown(step = 0): void {
 }
 
 onMounted(async () => {
-  session.resetRace()
-  playCountdown()
+  const preview = import.meta.env.DEV ? String(router.currentRoute.value.query.popup ?? '') : ''
+  if (preview === 'finish' || preview === 'over') {
+    session.setRacers(
+      { id: 'preview-1', nick: 'Тугарин Змей', gender: 'male' },
+      { id: 'preview-2', nick: 'Маша', gender: 'female' },
+    )
+    finishes.value = [
+      { index: 0, nick: 'Тугарин Змей', meters: 120, place: 1 },
+      { index: 1, nick: 'Маша', meters: 80, place: 2 },
+    ]
+    showFinish.value = true
+    finishStep.value = preview === 'over' ? 2 : 1
+  } else {
+    session.resetRace()
+    playCountdown()
+  }
 
   if (host.value === null) return
 
@@ -153,6 +190,7 @@ onMounted(async () => {
     () => settings.raceDistanceM,
     () => racing.value,
     () => coasting.value,
+    [...session.racerSheets],
   )
   if (closed) {
     started.destroy()
@@ -166,6 +204,7 @@ onBeforeUnmount(() => {
   closed = true
   window.clearInterval(clock)
   window.clearTimeout(reveal)
+  window.clearTimeout(toSecond)
   window.clearTimeout(leave)
   window.clearTimeout(countdownBeat)
   game?.destroy()
@@ -178,9 +217,9 @@ onBeforeUnmount(() => {
     <div ref="host" class="stage__canvas"></div>
 
     <div class="stage__overlay">
-      <div class="stage__split"></div>
+      <div v-if="!showFinish" class="stage__split"></div>
       <div v-if="racing && !showFinish" class="stage__timer">{{ timerLabel }}</div>
-      <div class="stage__lanes" :class="{ 'stage__lanes--dim': showFinish }">
+      <div v-if="!showFinish" class="stage__lanes">
         <RaceHud v-for="lane in lanes" :key="lane.telemetry.id" v-bind="lane" />
       </div>
       <div v-if="countdownText !== null" class="stage__countdown">
@@ -201,7 +240,8 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div v-if="showFinish" class="stage__finish">
-        <FinishCard v-for="card in finishes" :key="card.index" v-bind="card" />
+        <FinishPopup v-if="finishStep === 1" :winner-name="winnerName" />
+        <RaceOverPopup v-else :names="racerNames" />
       </div>
     </div>
   </div>
@@ -281,20 +321,12 @@ onBeforeUnmount(() => {
   grid-auto-columns: 1fr;
   height: 100%;
   min-height: 0;
-  transition: opacity 0.7s ease;
-
-  &--dim {
-    opacity: 0.18;
-  }
 }
 
 .stage__finish {
   position: absolute;
   inset: 0;
-  z-index: 3;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  z-index: 6;
   animation: finish-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

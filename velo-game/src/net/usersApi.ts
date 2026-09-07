@@ -9,22 +9,22 @@ import { getSupabase } from '@/net/supabase'
 export type VeloUser = {
   id: string
   nick: string
-  email: string | null
   phone: string | null
+  gender: 'male' | 'female'
   meters: number | null
   created_at: string
 }
 
 export type CreateUserInput = {
   nick: string
-  email?: string | null
   phone?: string | null
+  gender?: 'male' | 'female'
 }
 
 export type UpdateUserInput = {
   nick?: string
-  email?: string | null
   phone?: string | null
+  gender?: 'male' | 'female'
 }
 
 function trimOrNull(value: string | null | undefined): string | null {
@@ -85,8 +85,8 @@ export async function createUser(input: CreateUserInput): Promise<VeloUser> {
     .from('users')
     .insert({
       nick,
-      email: trimOrNull(input.email),
       phone: trimOrNull(input.phone),
+      gender: input.gender === 'female' ? 'female' : 'male',
     })
     .select()
     .single()
@@ -95,12 +95,12 @@ export async function createUser(input: CreateUserInput): Promise<VeloUser> {
   return data as VeloUser
 }
 
-/** Патч профиля (ник / почта / телефон). Метры сюда не пишем. */
+/** Патч профиля (ник / телефон / пол). Метры сюда не пишем. */
 export async function updateUser(id: string, patch: UpdateUserInput): Promise<VeloUser> {
   const payload: Record<string, string | null> = {}
   if (patch.nick !== undefined) payload.nick = requireNick(patch.nick)
-  if (patch.email !== undefined) payload.email = trimOrNull(patch.email)
   if (patch.phone !== undefined) payload.phone = trimOrNull(patch.phone)
+  if (patch.gender !== undefined) payload.gender = patch.gender === 'female' ? 'female' : 'male'
 
   if (Object.keys(payload).length === 0) {
     throw new Error('Нечего обновлять')

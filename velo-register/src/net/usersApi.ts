@@ -7,16 +7,16 @@ import { getSupabase } from '@/net/supabase'
 export type VeloUser = {
   id: string
   nick: string
-  email: string | null
   phone: string | null
+  gender: 'male' | 'female'
   meters: number | null
   created_at: string
 }
 
 export type CreateUserInput = {
   nick: string
-  email?: string | null
   phone?: string | null
+  gender?: 'male' | 'female'
 }
 
 function trimOrNull(value: string | null | undefined): string | null {
@@ -38,8 +38,8 @@ export async function createUser(input: CreateUserInput): Promise<VeloUser> {
     .from('users')
     .insert({
       nick,
-      email: trimOrNull(input.email),
       phone: trimOrNull(input.phone),
+      gender: input.gender === 'female' ? 'female' : 'male',
     })
     .select()
     .single()

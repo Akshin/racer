@@ -4,11 +4,20 @@
 
 html {
   color-scheme: dark;
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
-  background: t.$bg;
-  color: t.$text;
+  background: #07101c;
+  color: #fff;
   font-family: t.$font-stack;
   font-size: 18px;
 }

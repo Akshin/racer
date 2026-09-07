@@ -8,6 +8,9 @@ import { PLAYER_IDS } from '@/net/protocol'
 import { loadRaceAssets } from './assets'
 import { COLOR_DIVIDER } from './config'
 import { Lane } from './lane'
+import { racerSheetAlias } from './racerAlias'
+
+export { racerSheetAlias } from './racerAlias'
 
 export async function createGame(
   host: HTMLElement,
@@ -16,6 +19,7 @@ export async function createGame(
   raceDistanceM: () => number,
   racing: () => boolean,
   coasting: () => boolean,
+  racerAliases: readonly string[] = [],
 ): Promise<Game> {
   const app = new Application()
 
@@ -33,7 +37,7 @@ export async function createGame(
 
   host.appendChild(app.canvas)
 
-  const lanes = PLAYER_IDS.map((_, index) => new Lane(`racer${index + 1}`))
+  const lanes = PLAYER_IDS.map((_, index) => new Lane(racerAliases[index] ?? racerSheetAlias(index)))
   app.stage.addChild(...lanes.map((lane) => lane.view))
 
   function layout(): void {

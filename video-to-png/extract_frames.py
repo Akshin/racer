@@ -1,7 +1,7 @@
 import json
 import subprocess
 
-from common import FRAMES_DIR, RACERS, TARGET_FRAMES, list_videos, reset_racer_dirs
+from common import FRAMES_DIR, TARGET_FRAMES, list_videos, racers_from_args, reset_racer_dirs
 
 
 def video_duration(path) -> float:
@@ -46,10 +46,11 @@ def extract_one(video, out_dir) -> None:
     print(f"  {video.name} → {out_dir.name}: {len(pngs)} кадров")
 
 
-def main() -> None:
-    videos = list_videos()
-    reset_racer_dirs(FRAMES_DIR)
-    for racer, video in zip(RACERS, videos):
+def main(racers: tuple[str, ...] | None = None) -> None:
+    selected = racers or racers_from_args()
+    videos = list_videos(selected)
+    reset_racer_dirs(FRAMES_DIR, selected)
+    for racer, video in zip(selected, videos):
         print(f"Extract {racer}: {video.name}")
         extract_one(video, FRAMES_DIR / racer)
 
