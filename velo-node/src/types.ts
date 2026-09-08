@@ -11,6 +11,7 @@ export const PROTOCOL_VERSION = 1;
 
 export type PlayerId = 'p1' | 'p2';
 
+/** Адаптер всегда держит оба слота. Соло vs сплит — раскладка velo-game, не протокол. */
 export const PLAYER_IDS: readonly PlayerId[] = ['p1', 'p2'];
 
 export type PlayerTelemetry = {

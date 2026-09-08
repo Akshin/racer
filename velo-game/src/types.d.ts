@@ -92,6 +92,9 @@ declare global {
   /** Выбранный на экране старта гонщик. null — слот пуст, результат в БД не пишем. */
   type RaceRacer = { id: string; nick: string; gender: 'male' | 'female' } | null
 
+  /** Сколько полос на канвасе: 1 — полный экран синих, 2 — сплит. */
+  type PlayerCount = 1 | 2
+
   /** Всё, что нужно знать про одного игрока на странице проверки. */
   type PlayerCheck = {
     telemetry: PlayerTelemetry
@@ -113,7 +116,7 @@ declare global {
     destroy: () => void
   }
 
-  /** Откуда игра берёт телеметрию: вызывается каждый кадр, порядок = порядок половин. */
+  /** Откуда игра берёт телеметрию: вызывается каждый кадр, порядок = порядок полос. */
   type GameFeed = () => readonly PlayerTelemetry[]
 
   /** Настройки заезда со страницы проверки. Живут в localStorage. */
@@ -126,7 +129,7 @@ declare global {
     raceDistanceM: number
   }
 
-  /** Данные одной половины для HTML-оверлея поверх канваса. */
+  /** Данные одной полосы для HTML-оверлея поверх канваса. */
   type LaneHud = {
     index: number
     telemetry: PlayerTelemetry
@@ -134,6 +137,8 @@ declare global {
     elapsedMs: number
     /** Ник с экрана старта. Если нет — HUD пишет «Игрок N». */
     nick: string | null
+    /** Полный экран без сплита: спидометр не растягивается на всю ширину. */
+    solo?: boolean
   }
 
   /**

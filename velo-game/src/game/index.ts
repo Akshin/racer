@@ -1,10 +1,10 @@
 /**
- * Точка входа игры: приложение PixiJS, сплитскрин из половин-дорог и кадровый цикл.
+ * Точка входа игры: приложение PixiJS, одна или две дороги и кадровый цикл.
  * Телеметрию игра не знает откуда брать — её подаёт вызывающая сторона через feed.
+ * Адаптер всегда шлёт p1 и p2; сколько полос рисовать, решает клиент.
  */
 
 import { Application, type Ticker } from 'pixi.js'
-import { PLAYER_IDS } from '@/net/protocol'
 import { loadRaceAssets } from './assets'
 import { COLOR_DIVIDER } from './config'
 import { Lane } from './lane'
@@ -20,8 +20,10 @@ export async function createGame(
   racing: () => boolean,
   coasting: () => boolean,
   racerAliases: readonly string[] = [],
+  laneCount: PlayerCount = 2,
 ): Promise<Game> {
   const app = new Application()
+  const count: PlayerCount = laneCount === 1 ? 1 : 2
 
   await loadRaceAssets()
 
@@ -37,7 +39,10 @@ export async function createGame(
 
   host.appendChild(app.canvas)
 
-  const lanes = PLAYER_IDS.map((_, index) => new Lane(racerAliases[index] ?? racerSheetAlias(index)))
+  const lanes = Array.from(
+    { length: count },
+    (_, index) => new Lane(racerAliases[index] ?? racerSheetAlias(index)),
+  )
   app.stage.addChild(...lanes.map((lane) => lane.view))
 
   function layout(): void {

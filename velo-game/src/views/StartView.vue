@@ -12,17 +12,19 @@ import { useSessionStore } from '@/stores/session'
 const POLL_MS = 2000
 
 type Gender = 'male' | 'female'
-type PlayerCount = 1 | 2
 
 const session = useSessionStore()
 const router = useRouter()
 
 const users = ref<VeloUser[]>([])
-const playerCount = ref<PlayerCount>(1)
-const p1 = ref('')
-const p2 = ref('')
-const gender1 = ref<Gender>('male')
-const gender2 = ref<Gender>('male')
+const playerCount = computed({
+  get: () => session.playerCount,
+  set: (count) => session.setPlayerCount(count),
+})
+const p1 = ref(session.racers[0]?.id ?? '')
+const p2 = ref(session.racers[1]?.id ?? '')
+const gender1 = ref<Gender>(session.racers[0]?.gender ?? 'male')
+const gender2 = ref<Gender>(session.racers[1]?.gender ?? 'male')
 const loadError = ref('')
 
 const seenIds = new Set<string>()
@@ -104,6 +106,7 @@ function startRace(): void {
       racerSheetAlias(0, gender1.value),
       racerSheetAlias(1, playerCount.value === 2 ? gender2.value : undefined),
     ],
+    playerCount.value,
   )
   void router.push({ name: 'game' })
 }

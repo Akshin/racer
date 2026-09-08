@@ -47,12 +47,13 @@ const finishStep = ref<1 | 2>(1)
 const finishes = ref<LaneFinish[]>([])
 const frozenTelemetry = ref<PlayerTelemetry[] | null>(null)
 
+const solo = computed(() => session.playerCount === 1)
 const remainingMs = computed(() => Math.max(0, RACE_DURATION_MS - elapsedMs.value))
 
 const timerLabel = computed(() => String(Math.floor(remainingMs.value / 1000)).padStart(2, '0'))
 
 const lanes = computed<LaneHud[]>(() =>
-  session.playerChecks.map((check, index) => {
+  session.activePlayerChecks.map((check, index) => {
     const live = frozenTelemetry.value?.[index] ?? check.telemetry
     return {
       index,
@@ -60,6 +61,7 @@ const lanes = computed<LaneHud[]>(() =>
       sensor: check.sensor,
       elapsedMs: elapsedMs.value,
       nick: session.racers[index]?.nick ?? null,
+      solo: solo.value,
     }
   }),
 )
@@ -88,10 +90,10 @@ let countdownBeat: number | undefined
 let finished = false
 
 async function finish(): Promise<void> {
-  frozenTelemetry.value = session.playerChecks.map((check) => ({ ...check.telemetry }))
+  frozenTelemetry.value = session.activePlayerChecks.map((check) => ({ ...check.telemetry }))
   coasting.value = true
 
-  const snapshots: LaneFinish[] = session.playerChecks.map((check, index) => ({
+  const snapshots: LaneFinish[] = session.activePlayerChecks.map((check, index) => ({
     index,
     nick: session.racers[index]?.nick ?? null,
     meters: check.telemetry.distance,
@@ -169,6 +171,8 @@ onMounted(async () => {
     session.setRacers(
       { id: 'preview-1', nick: 'Тугарин Змей', gender: 'male' },
       { id: 'preview-2', nick: 'Маша', gender: 'female' },
+      undefined,
+      2,
     )
     finishes.value = [
       { index: 0, nick: 'Тугарин Змей', meters: 120, place: 1 },
@@ -185,12 +189,13 @@ onMounted(async () => {
 
   const started = await createGame(
     host.value,
-    () => session.playerChecks.map((check) => check.telemetry),
+    () => session.activePlayerChecks.map((check) => check.telemetry),
     () => settings.speedScale,
     () => settings.raceDistanceM,
     () => racing.value,
     () => coasting.value,
     [...session.racerSheets],
+    session.playerCount,
   )
   if (closed) {
     started.destroy()
@@ -213,11 +218,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="stage">
+  <div class="stage" :class="{ 'stage--solo': solo }">
     <div ref="host" class="stage__canvas"></div>
 
     <div class="stage__overlay">
-      <div v-if="!showFinish" class="stage__split"></div>
+      <div v-if="!showFinish && !solo" class="stage__split"></div>
       <div v-if="racing && !showFinish" class="stage__timer">{{ timerLabel }}</div>
       <div v-if="!showFinish" class="stage__lanes">
         <RaceHud v-for="lane in lanes" :key="lane.telemetry.id" v-bind="lane" />
@@ -312,6 +317,10 @@ onBeforeUnmount(() => {
     border-radius: 2px;
     pointer-events: none;
     background: linear-gradient(90deg, t.$player-1 0 50%, t.$player-2 50% 100%);
+  }
+
+  .stage--solo &::after {
+    background: t.$player-1;
   }
 }
 

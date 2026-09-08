@@ -24,6 +24,12 @@ const RACERS_STORAGE_KEY = 'velo:racers'
 type StoredRacers = {
   racers: [RaceRacer, RaceRacer]
   sheets: [string, string]
+  playerCount: PlayerCount
+}
+
+function asPlayerCount(value: unknown, racers: readonly RaceRacer[]): PlayerCount {
+  if (value === 1 || value === 2) return value
+  return racers[1] != null ? 2 : 1
 }
 
 function readStoredRacers(): StoredRacers | null {
@@ -33,7 +39,12 @@ function readStoredRacers(): StoredRacers | null {
     const parsed = JSON.parse(raw) as Partial<StoredRacers>
     if (!Array.isArray(parsed.racers) || parsed.racers.length !== 2) return null
     if (!Array.isArray(parsed.sheets) || parsed.sheets.length !== 2) return null
-    return { racers: parsed.racers as [RaceRacer, RaceRacer], sheets: parsed.sheets as [string, string] }
+    const racers = parsed.racers as [RaceRacer, RaceRacer]
+    return {
+      racers,
+      sheets: parsed.sheets as [string, string],
+      playerCount: asPlayerCount(parsed.playerCount, racers),
+    }
   } catch {
     return null
   }
@@ -72,6 +83,26 @@ export const useSessionStore = defineStore('session', () => {
   const racers = ref<[RaceRacer, RaceRacer]>(storedRacers?.racers ?? [null, null])
   /** Атласы велосипедистов: считаются по полу на старте, не из пустого слота. */
   const racerSheets = ref<[string, string]>(storedRacers?.sheets ?? ['racer1', 'racer2'])
+  /** 1 — полный экран синих (p1), 2 — сплит. Совпадает с выбором на /start. */
+  const playerCount = ref<PlayerCount>(storedRacers?.playerCount ?? 1)
+
+  function persistRacers(): void {
+    window.sessionStorage.setItem(
+      RACERS_STORAGE_KEY,
+      JSON.stringify({
+        racers: racers.value,
+        sheets: racerSheets.value,
+        playerCount: playerCount.value,
+      }),
+    )
+  }
+
+  function trainersReady(ids: readonly PlayerId[]): boolean {
+    return ids.every((id) => {
+      const check = checks.value[id]
+      return check !== undefined && check.telemetry.connected && check.spinning
+    })
+  }
 
   // Часы для проверки «данные ещё идут»: дают шкале обновляться без новых сообщений.
   const now = ref(Date.now())
@@ -131,6 +162,16 @@ export const useSessionStore = defineStore('session', () => {
 
   const playerChecks = computed(() => PLAYER_IDS.map((id) => checks.value[id]))
 
+  /** Слоты, которые реально едут: соло — только синие (p1). */
+  const activePlayerIds = computed(() => PLAYER_IDS.slice(0, playerCount.value))
+
+  const activePlayerChecks = computed(() =>
+    activePlayerIds.value.flatMap((id) => {
+      const check = checks.value[id]
+      return check === undefined ? [] : [check]
+    }),
+  )
+
   /** Телеметрия приходит прямо сейчас. */
   const dataFlowing = computed(
     () => status.value === 'online' && now.value - lastTelemetryAt.value < STALE_MS,
@@ -149,7 +190,7 @@ export const useSessionStore = defineStore('session', () => {
       })
       if (!anyReady) list.push('Покрутите педали хотя бы на одном тренажёре')
     } else {
-      PLAYER_IDS.forEach((id, index) => {
+      activePlayerIds.value.forEach((id, index) => {
         const check = checks.value[id]
         const label = `Тренажёр ${index + 1}`
         if (check === undefined || !check.telemetry.connected)
@@ -174,20 +215,27 @@ export const useSessionStore = defineStore('session', () => {
     window.sessionStorage.setItem(VERIFIED_STORAGE_KEY, '1')
   })
 
+  function dropVerified(): void {
+    verified.value = false
+    window.sessionStorage.removeItem(VERIFIED_STORAGE_KEY)
+  }
+
   // Сняли «достаточно одного» — прежняя проверка одним датчиком больше не считается пройденной.
   watch(
     () => settings.allowOneTrainer,
     (allow) => {
       if (allow) return
-      const allReady = PLAYER_IDS.every((id) => {
-        const check = checks.value[id]
-        return check !== undefined && check.telemetry.connected && check.spinning
-      })
-      if (allReady) return
-      verified.value = false
-      window.sessionStorage.removeItem(VERIFIED_STORAGE_KEY)
+      if (trainersReady(activePlayerIds.value)) return
+      dropVerified()
     },
   )
+
+  // С 1 на 2 игроков: проверка только синего слота больше не открывает сплит.
+  watch(playerCount, (count, previous) => {
+    if (count !== 2 || previous !== 1 || settings.allowOneTrainer) return
+    if (trainersReady(PLAYER_IDS)) return
+    dropVerified()
+  })
 
   function connect(): void {
     window.localStorage.setItem(URL_STORAGE_KEY, url.value)
@@ -216,17 +264,27 @@ export const useSessionStore = defineStore('session', () => {
     log('info', 'Отправлен сброс дистанции')
   }
 
+  /** Сколько полос рисовать. На одном игроке обнуляем правый слот. */
+  function setPlayerCount(count: PlayerCount): void {
+    playerCount.value = count
+    if (count === 1) racers.value = [racers.value[0], null]
+    persistRacers()
+  }
+
   /** Назначить гонщиков перед входом на экран заезда. sheets — атласы с экрана старта. */
-  function setRacers(p1: RaceRacer, p2: RaceRacer, sheets?: readonly string[]): void {
-    racers.value = [p1, p2]
+  function setRacers(
+    p1: RaceRacer,
+    p2: RaceRacer,
+    sheets?: readonly string[],
+    count?: PlayerCount,
+  ): void {
+    if (count !== undefined) playerCount.value = count
+    racers.value = [p1, playerCount.value === 1 ? null : p2]
     racerSheets.value = [
       sheets?.[0] ?? racerSheetAlias(0, p1?.gender),
-      sheets?.[1] ?? racerSheetAlias(1, p2?.gender),
+      sheets?.[1] ?? racerSheetAlias(1, racers.value[1]?.gender),
     ]
-    window.sessionStorage.setItem(
-      RACERS_STORAGE_KEY,
-      JSON.stringify({ racers: racers.value, sheets: racerSheets.value }),
-    )
+    persistRacers()
   }
 
   function clearLogs(): void {
@@ -240,6 +298,8 @@ export const useSessionStore = defineStore('session', () => {
     tickHz,
     metersPerCrankRev,
     playerChecks,
+    activePlayerChecks,
+    playerCount,
     dataFlowing,
     blockers,
     ready,
@@ -249,6 +309,7 @@ export const useSessionStore = defineStore('session', () => {
     connect,
     disconnect,
     resetRace,
+    setPlayerCount,
     setRacers,
     clearLogs,
   }

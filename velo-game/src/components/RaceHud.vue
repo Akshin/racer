@@ -60,7 +60,7 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
 <template>
   <section
     class="hud"
-    :class="[`hud--player-${index + 1}`, { 'hud--offline': !telemetry.connected }]"
+    :class="[`hud--player-${index + 1}`, { 'hud--offline': !telemetry.connected, 'hud--solo': solo }]"
   >
     <div class="hud__bottom">
       <div class="gauge">
@@ -182,6 +182,18 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
     .gauge,
     .stats {
       opacity: 0.45;
+    }
+  }
+
+  &--solo {
+    .gauge {
+      flex: 0 0 min(26rem, 22vw);
+      width: min(26rem, 22vw);
+    }
+
+    .stats {
+      flex: 0 1 auto;
+      max-width: min(36rem, 42vw);
     }
   }
 }
