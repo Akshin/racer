@@ -43,12 +43,17 @@ onBeforeUnmount(() => {
     @keydown.enter.prevent="goToRegister"
     @keydown.space.prevent="goToRegister"
   >
+    <div class="glow" aria-hidden="true">
+      <span class="glow__spot glow__spot--top" />
+      <span class="glow__spot glow__spot--mid" />
+      <span class="glow__spot glow__spot--bot" />
+    </div>
+
     <div class="frame frame--red">
       <div class="frame frame--blue">
         <img class="logo" src="../assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
 
-        <div class="body">
-          <img class="mascot" src="../assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
+        <div class="stage">
           <p class="bubble">
             <strong>Хорошо!</strong>
             <span>Подожди, когда сотрудник</span>
@@ -57,99 +62,150 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <img class="mascot" src="../assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
   </main>
 </template>
 
 <style scoped lang="scss">
 $red: #ff2b42;
 $blue: #0077ff;
-$navy: #07101c;
-$bubble: #9aa8bc;
-$gutter: clamp(8px, 1.6vh, 28px);
+$glow: #0040ff;
+$bubble-start: #2e54f1;
+$bubble-end: #c5d2f8;
+$bubble-bot: #8ea4f5;
+$bubble-side: #5e7af3;
 
 .page {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  padding: max($gutter, env(safe-area-inset-top, 0px)) max($gutter, env(safe-area-inset-right, 0px))
-    max($gutter, env(safe-area-inset-bottom, 0px)) max($gutter, env(safe-area-inset-left, 0px));
+  padding: clamp(12px, 2.4vh, 32px);
   overflow: hidden;
-  background: $navy;
-  box-shadow: 0 0 182px 0 #0040ff inset;
+  background: #0e1a50;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glow__spot {
+  position: absolute;
+  border-radius: 50%;
+  background: $glow;
+  opacity: 0.9;
+
+  &--top {
+    width: 58%;
+    height: 70%;
+    left: 6%;
+    top: -28%;
+    filter: blur(180px);
+  }
+
+  &--mid {
+    width: 46%;
+    height: 52%;
+    left: 18%;
+    top: 18%;
+    opacity: 0.55;
+    filter: blur(160px);
+  }
+
+  &--bot {
+    width: 42%;
+    height: 38%;
+    left: 8%;
+    bottom: -18%;
+    filter: blur(90px);
+  }
+}
+
 .frame {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
-  border-radius: clamp(14px, 2.2vw, 25px);
+  overflow: visible;
+  border-radius: clamp(16px, 2.2vw, 25px);
 
   &--red {
-    padding: clamp(6px, 1.5vh, 22px);
-    border: clamp(4px, 0.8vw, 9px) solid $red;
+    padding: clamp(8px, 1.6vh, 22px);
+    border: clamp(5px, 0.8vw, 9px) solid $red;
     box-shadow: 0 0 24px rgba($red, 0.35);
   }
 
   &--blue {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: clamp(8px, 2vh, 24px);
-    padding: clamp(10px, 2.2vh, 32px) clamp(12px, 2.4vw, 36px) clamp(8px, 1.4vh, 20px);
-    border: clamp(3px, 0.6vw, 7px) solid $blue;
+    padding: clamp(56px, 9vh, 76px) clamp(18px, 2.6vw, 40px) clamp(16px, 2.4vh, 28px);
+    overflow: visible;
+    border: clamp(4px, 0.65vw, 7px) solid $blue;
     box-shadow: 0 0 18px rgba($blue, 0.28);
   }
 }
 
 .logo {
-  width: min(100%, clamp(160px, 20vw, 240px));
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  z-index: 6;
+  width: min(42vw, 210px);
   height: auto;
-  margin: 0 auto;
+  transform: translateX(-50%);
   pointer-events: none;
+  user-select: none;
 }
 
-.body {
-  position: relative;
+.stage {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
   align-items: center;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
 }
 
 .mascot {
-  align-self: end;
-  justify-self: start;
+  position: absolute;
+  left: -23px;
+  bottom: 0;
+  z-index: 3;
   width: auto;
-  max-width: 100%;
-  height: min(100%, 78vh);
+  max-width: 58%;
+  height: min(92%, 78vh);
   object-fit: contain;
   object-position: left bottom;
   pointer-events: none;
+  user-select: none;
 }
 
 .bubble {
   position: relative;
-  z-index: 1;
-  justify-self: center;
+  z-index: 4;
+  grid-column: 2;
+  justify-self: start;
   width: max-content;
   max-width: min(100%, 34rem);
   margin: 0;
-  padding: clamp(18px, 3.2vh, 40px) clamp(12px, 3.2vw, 28px);
+  padding: clamp(22px, 3.4vh, 42px) clamp(22px, 3vw, 40px);
   color: #fff;
-  font-size: clamp(1.15rem, 0.7rem + 2.1vw, 2.15rem);
+  font-size: clamp(1.25rem, 0.75rem + 2vw, 2.15rem);
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.25;
   text-align: center;
-  background: #9aa8bc;
-  border-radius: clamp(18px, 2.4vw, 32px);
+  border-radius: 32px;
+  background: linear-gradient(135deg, $bubble-start 0%, $bubble-end 100%);
   pointer-events: none;
-  background: linear-gradient(135deg, #003180 0%, #4c9ef8 50%, #9cbefb 100%);
-  white-space: nowrap;
 
   strong,
   span {
@@ -157,9 +213,8 @@ $gutter: clamp(8px, 1.6vh, 28px);
   }
 
   strong {
-    margin-bottom: 0.2em;
+    margin-bottom: 0.15em;
     font-size: 1.08em;
-    font-weight: 700;
   }
 
   span {
@@ -172,25 +227,29 @@ $gutter: clamp(8px, 1.6vh, 28px);
     top: 52%;
     left: 0;
     border: 16px solid transparent;
-    border-right-color: $bubble;
+    border-right-color: $bubble-side;
     border-left-width: 0;
-    transform: translate(-92%, -50%);
+    transform: translate(-90%, -50%);
   }
 }
 
 @media (orientation: portrait) {
-  .frame--blue {
-    grid-template-rows: auto minmax(0, 1fr);
+  .page {
+    overflow: auto;
   }
 
-  .body {
+  .frame--blue {
+    padding-top: clamp(64px, 10vh, 84px);
+  }
+
+  .stage {
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
     justify-items: center;
   }
 
   .bubble {
-    order: 0;
+    grid-column: 1;
     margin-top: clamp(8px, 2vh, 20px);
 
     &::after {
@@ -198,16 +257,18 @@ $gutter: clamp(8px, 1.6vh, 28px);
       bottom: 0;
       left: 28%;
       border: 12px solid transparent;
-      border-top-color: $bubble;
+      border-top-color: $bubble-bot;
       border-bottom-width: 0;
-      transform: translateY(92%);
+      transform: translateY(90%);
     }
   }
 
   .mascot {
-    order: 1;
-    height: min(100%, 48vh);
-    justify-self: center;
+    max-width: 72%;
+    height: min(42vh, 360px);
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
   }
 }
 
@@ -219,12 +280,6 @@ $gutter: clamp(8px, 1.6vh, 28px);
   .bubble {
     font-size: clamp(1rem, 2.4vh, 1.35rem);
     padding: 14px 20px;
-  }
-}
-
-@media (max-width: 700px) {
-  .body {
-    grid-template-columns: 1fr;
   }
 }
 </style>

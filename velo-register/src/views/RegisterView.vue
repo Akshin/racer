@@ -23,11 +23,7 @@ const error = ref('')
 const phoneDisplay = computed(() => formatPhone(phoneDigits.value))
 const phoneReady = computed(() => phoneDigits.value.length === PHONE_LOCAL_DIGITS)
 const canSubmit = computed(
-  () =>
-    nick.value.trim() !== '' &&
-    phoneReady.value &&
-    consent.value &&
-    !submitting.value,
+  () => nick.value.trim() !== '' && phoneReady.value && consent.value && !submitting.value,
 )
 
 /** Цифры после +7: 10 штук. 7 и 8 в начале — код страны / восьмёрка, не номер. */
@@ -50,9 +46,17 @@ function formatPhone(digits: string): string {
   return out
 }
 
+function capitalizeNick(value: string): string {
+  if (value === '') return value
+  return value.charAt(0).toLocaleUpperCase('ru-RU') + value.slice(1)
+}
+
 function onNickInput(event: Event): void {
   const input = event.target as HTMLInputElement
-  nick.value = input.value.slice(0, NICK_MAX)
+  const caret = input.selectionStart
+  nick.value = capitalizeNick(input.value.slice(0, NICK_MAX))
+  input.value = nick.value
+  if (caret !== null) input.setSelectionRange(caret, caret)
 }
 
 function onPhoneBeforeInput(event: Event): void {
@@ -107,17 +111,26 @@ async function onSubmit(): Promise<void> {
 
 <template>
   <main class="page">
+    <div class="glow" aria-hidden="true">
+      <span class="glow__spot glow__spot--top" />
+      <span class="glow__spot glow__spot--mid" />
+      <span class="glow__spot glow__spot--bot" />
+    </div>
+
     <div class="frame frame--red">
       <div class="frame frame--blue">
+        <img class="logo" src="../assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+
         <div class="stage">
           <div class="hero">
-            <p class="bubble">Введи свой никнейм и номер телефона, чтобы ты смог забрать приз!</p>
-            <img class="mascot" src="../assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
+            <p class="bubble">
+              Введи свой никнейм<br />
+              и номер телефона, чтобы<br />
+              ты смог забрать приз!
+            </p>
           </div>
 
           <section class="panel">
-            <img class="logo" src="../assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
-
             <form class="form" autocomplete="off" novalidate @submit.prevent="onSubmit">
               <p v-if="error" class="banner error" role="alert">{{ error }}</p>
 
@@ -203,95 +216,159 @@ async function onSubmit(): Promise<void> {
         </div>
       </div>
     </div>
+    <img class="mascot" src="../assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
   </main>
 </template>
 
 <style scoped lang="scss">
 $red: #ff2b42;
 $blue: #0077ff;
-$navy: #07101c;
-$field-bg: rgba(18, 26, 40, 0.78);
-$bubble: #c5ced8;
-$text-dark: #1a2740;
+$glow: #0040ff;
+$field-bg: rgba(255, 255, 255, 0.4);
+$field-text: #313131;
+$muted: #c7c7c7;
+$choice-off: #c8c8c8;
+$bubble-start: #2e54f1;
+$bubble-end: #c5d2f8;
+$bubble-bot: #a8b8f6;
 
 .page {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  padding: clamp(10px, 2.2vh, 28px);
+  padding: clamp(12px, 2.4vh, 32px);
   overflow: hidden;
-  background: $navy;
-  box-shadow: 0 0 182px 0 #0040ff inset;
+  background: #0e1a50;
   -webkit-tap-highlight-color: transparent;
 }
 
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glow__spot {
+  position: absolute;
+  border-radius: 50%;
+  background: $glow;
+  opacity: 0.9;
+
+  &--top {
+    width: 58%;
+    height: 70%;
+    left: 6%;
+    top: -28%;
+    filter: blur(180px);
+  }
+
+  &--mid {
+    width: 46%;
+    height: 52%;
+    left: 18%;
+    top: 18%;
+    opacity: 0.55;
+    filter: blur(160px);
+  }
+
+  &--bot {
+    width: 42%;
+    height: 38%;
+    left: 8%;
+    bottom: -18%;
+    filter: blur(90px);
+  }
+}
+
 .frame {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  border-radius: 25px;
+  min-width: 0;
+  min-height: 0;
+  overflow: visible;
+  border-radius: clamp(16px, 2.2vw, 25px);
 
   &--red {
-    padding: clamp(10px, 1.8vh, 22px);
-    border: 9px solid $red;
+    padding: clamp(8px, 1.6vh, 22px);
+    border: clamp(5px, 0.8vw, 9px) solid $red;
     box-shadow: 0 0 24px rgba($red, 0.35);
   }
 
   &--blue {
-    padding: clamp(12px, 2.4vh, 28px) clamp(16px, 2.4vw, 32px);
-    border: 7px solid $blue;
+    padding: clamp(56px, 9vh, 76px) clamp(18px, 2.6vw, 40px) clamp(16px, 2.4vh, 28px);
+    overflow: visible;
+    border: clamp(4px, 0.65vw, 7px) solid $blue;
     box-shadow: 0 0 18px rgba($blue, 0.28);
   }
 }
 
 .stage {
-  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(340px, 0.88fr);
-  gap: clamp(12px, 2vw, 32px);
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 32rem);
+  gap: clamp(12px, 2.4vw, 40px);
   width: 100%;
   height: 100%;
+  min-width: 0;
   min-height: 0;
 }
 
 .hero {
   position: relative;
+  z-index: 4;
+  align-self: start;
   min-width: 0;
-  min-height: 0;
+  padding: 40px 30px 0 30px;
 }
 
 .bubble {
   position: relative;
-  z-index: 2;
-  max-width: min(100%, 28rem);
-  margin: clamp(4px, 1.5vh, 20px) 0 0 clamp(8px, 2vw, 36px);
-  padding: clamp(14px, 2vh, 22px) clamp(16px, 1.8vw, 26px);
+  width: min(100%, 25rem);
+  margin: 0;
+  padding: clamp(16px, 2.2vh, 26px) clamp(18px, 2vw, 28px);
   color: #fff;
-  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  font-size: clamp(1.15rem, 1.1rem + 0.7vw, 1.85rem);
   font-weight: 500;
-  line-height: 1.35;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #003180 0%, #4c9ef8 50%, #9cbefb 100%);
+  line-height: 1.1;
+  text-align: center;
+  border-radius: 28px;
+  background: linear-gradient(315deg, $bubble-start 0%, $bubble-end 100%);
 
   &::after {
     content: '';
     position: absolute;
     left: 18%;
-    bottom: -14px;
-    border: 10px solid transparent;
-    border-top-color: $bubble;
+    bottom: -16px;
+    border: 12px solid transparent;
+    border-top-color: $bubble-bot;
     border-bottom-width: 0;
   }
 }
 
+.logo {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  z-index: 6;
+  width: min(42vw, 210px);
+  height: auto;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+
 .mascot {
   position: absolute;
-  left: -2%;
-  bottom: -2%;
-  z-index: 1;
+  left: -23px;
+  bottom: 0;
+  z-index: 3;
   width: auto;
-  height: 78%;
-  max-width: none;
+  max-width: 58%;
+  height: min(92%, 78vh);
   object-fit: contain;
   object-position: left bottom;
   pointer-events: none;
@@ -299,24 +376,21 @@ $text-dark: #1a2740;
 }
 
 .panel {
+  position: relative;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-self: center;
+  width: min(100%, 31rem);
   min-width: 0;
   min-height: 0;
-  padding: 0 clamp(8px, 1.5vw, 28px) 0 0;
-  z-index: 2;
-}
-
-.logo {
-  width: min(100%, 220px);
-  height: auto;
-  margin: 0 auto clamp(10px, 1.8vh, 22px);
+  justify-self: end;
 }
 
 .form {
   display: grid;
-  gap: clamp(8px, 1.3vh, 14px);
+  gap: clamp(14px, 2.2vh, 26px);
 }
 
 .banner {
@@ -333,7 +407,7 @@ $text-dark: #1a2740;
 
 .field {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.45rem;
   margin: 0;
   padding: 0;
   border: 0;
@@ -342,59 +416,61 @@ $text-dark: #1a2740;
 
 .field__label {
   color: #fff;
-  font-size: clamp(0.95rem, 1.2vw, 1.15rem);
-  font-weight: 500;
+  font-size: clamp(1rem, 1.15vw, 1.25rem);
+  font-weight: 700;
+  font-size: 20px;
 }
 
 .field input {
   width: 100%;
-  height: clamp(48px, 6.2vh, 58px);
-  padding: 0 1.1rem;
-  color: #fff;
-  font-size: 1.05rem;
+  height: clamp(46px, 5.8vh, 54px);
+  padding: 0 1rem;
+  color: $field-text;
+  font-size: 20px;
+  font-weight: 500;
   background: $field-bg;
   border: 0;
-  border-radius: 14px;
+  border-radius: 13px;
   outline: none;
   appearance: none;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 
   &::placeholder {
-    color: rgba(255, 255, 255, 0.38);
+    color: $field-text;
+    opacity: 0.72;
   }
 
   &:focus {
-    box-shadow: inset 0 0 0 1px rgba($blue, 0.7);
+    box-shadow: 0 0 0 2px rgba($blue, 0.65);
   }
 }
 
 .gender__row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 0.9rem;
 }
 
 .choice,
 .consent {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.65rem;
   width: 100%;
-  min-height: clamp(48px, 6.2vh, 56px);
-  padding: 0 1rem;
+  min-height: clamp(46px, 5.8vh, 52px);
+  padding: 0 0.85rem;
   color: #fff;
-  font-size: 1rem;
+  font-size: clamp(0.95rem, 1.05vw, 1.125rem);
   font-weight: 500;
   text-align: left;
-  background: $field-bg;
-  border: 1.5px solid rgba(255, 255, 255, 0.55);
-  border-radius: 14px;
+  background: transparent;
+  border: 2.5px solid $choice-off;
+  border-radius: 13px;
   user-select: none;
 }
 
 .consent {
-  font-size: clamp(0.82rem, 1.05vw, 0.98rem);
-  line-height: 1.25;
+  font-size: clamp(0.88rem, 1vw, 1.05rem);
+  line-height: 1.2;
 }
 
 .choice.is-on,
@@ -423,6 +499,10 @@ $text-dark: #1a2740;
   }
 }
 
+.consent .tick {
+  border-radius: 6px;
+}
+
 .choice.is-on .tick,
 .consent.is-on .tick {
   background: $red;
@@ -435,23 +515,23 @@ $text-dark: #1a2740;
 
 .legal {
   margin: 0;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: clamp(0.72rem, 1vw, 0.88rem);
+  color: $muted;
+  font-size: clamp(0.8rem, 0.95vw, 1.05rem);
+  font-weight: 500;
   line-height: 1.35;
 
   span {
     color: $red;
-    font-weight: 500;
   }
 }
 
 .submit {
   width: 100%;
-  height: clamp(52px, 7vh, 64px);
-  margin-top: clamp(4px, 1vh, 10px);
+  height: clamp(52px, 6.6vh, 62px);
+  margin-top: 0.15rem;
   color: #fff;
-  font-size: clamp(1.05rem, 1.6vw, 1.35rem);
-  font-weight: 700;
+  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+  font-weight: 500;
   background: $red;
   border: 0;
   border-radius: 999px;
@@ -483,21 +563,47 @@ $text-dark: #1a2740;
     overflow: auto;
   }
 
+  .frame--blue {
+    padding-top: clamp(64px, 10vh, 84px);
+  }
+
   .stage {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
   }
 
   .hero {
-    min-height: 34vh;
+    min-height: auto;
   }
 
   .mascot {
-    height: 88%;
+    max-width: 72%;
+    height: min(42vh, 360px);
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
   }
 
   .panel {
-    padding: 0 4px 8px;
+    justify-self: stretch;
+    width: 100%;
+    padding-bottom: 8px;
+  }
+}
+
+@media (max-height: 700px) and (orientation: landscape) {
+  .frame--blue {
+    padding-top: clamp(44px, 8vh, 60px);
+    padding-bottom: 10px;
+  }
+
+  .form {
+    gap: 10px;
+  }
+
+  .bubble {
+    font-size: 1.15rem;
+    padding: 12px 16px;
   }
 }
 </style>
