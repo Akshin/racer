@@ -100,6 +100,11 @@ export const BANNER_PHASE_LEFT = 0.4
 export const BANNER_PHASE_RIGHT = 0.4
 export const BANNER_DISTANCE_M = 90
 export const BANNER_FADE_M = 14
+/**
+ * Минимальный z постера у камеры. Не путать с projection.nearZ (низ кадра):
+ * клип туда сжимал текстуру, когда баннер подъезжал к краю экрана.
+ */
+export const BANNER_CAM_Z_M = 0.45
 export const BANNER_SLOTS_PER_SIDE = Math.ceil(BANNER_DISTANCE_M / BANNER_PERIOD_M) + 2
 /** Баннеры только на первых метрах заезда (метры адаптера, как в HUD). */
 export const BANNER_UNTIL_M = 170

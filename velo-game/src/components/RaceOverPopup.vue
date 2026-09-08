@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Второй финишный оверлей: «никуда не уходите». Полупрозрачный — трасса видна под ним.
+ * Последний финишный оверлей: «никуда не уходите». Всегда после результатов.
  */
 import { computed } from 'vue'
 
@@ -44,7 +44,7 @@ const confetti = Array.from({ length: 42 }, (_, i) => ({
       <div class="frame frame--blue">
         <img class="mascot" src="@/assets/images/mascod_flag.png" alt="" draggable="false" />
 
-        <div class="copy">
+        <div class="panel">
           <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
           <h2>Гонка закончена!</h2>
 
@@ -88,6 +88,7 @@ $text-blue: #1d4aa8;
   padding: clamp(10px, 2vh, 24px);
   overflow: hidden;
   background: rgb(10 48 150 / 42%);
+  backdrop-filter: blur(8px);
 }
 
 .confetti {
@@ -102,7 +103,9 @@ $text-blue: #1d4aa8;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
+  min-width: 0;
   min-height: 0;
+  overflow: visible;
   border-radius: clamp(16px, 2.4vw, 28px);
 
   &--red {
@@ -121,27 +124,30 @@ $text-blue: #1d4aa8;
 
 .mascot {
   position: absolute;
-  left: calc(-1 * clamp(28px, 5vw, 64px));
-  bottom: calc(-1 * clamp(12px, 2.4vh, 32px));
+  left: calc(-1 * clamp(20px, 3.6vw, 48px));
+  bottom: 0;
   z-index: 3;
   width: auto;
-  height: min(108%, 92vh);
-  max-width: none;
+  height: min(96%, 88vh);
+  max-width: 44%;
   object-fit: contain;
   object-position: left bottom;
   pointer-events: none;
   user-select: none;
 }
 
-.copy {
+.panel {
   position: relative;
-  z-index: 2;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: clamp(10px, 1.6vh, 18px);
+  width: min(58%, 38rem);
   height: 100%;
-  padding: 6% 6% 12% 32%;
+  margin-left: auto;
+  padding: clamp(12px, 2vh, 24px) clamp(16px, 2vw, 28px) clamp(56px, 8vh, 72px);
   color: #fff;
   text-align: center;
 }
@@ -149,41 +155,43 @@ $text-blue: #1d4aa8;
 .logo {
   width: min(100%, 210px);
   height: auto;
-  margin-bottom: clamp(10px, 1.8vh, 18px);
+  pointer-events: none;
+  user-select: none;
 }
 
 h2 {
-  margin: 0 0 clamp(18px, 3vh, 32px);
-  font-size: clamp(2.1rem, 5.4vw, 4.2rem);
-  font-weight: 800;
+  margin: 0;
+  font-size: clamp(2.1rem, 5.2vw, 3.8rem);
+  font-weight: 700;
   line-height: 1.05;
 }
 
 .card {
   position: relative;
-  width: min(100%, 36rem);
-  padding: clamp(2rem, 3.6vh, 2.6rem) clamp(1.6rem, 3vw, 2.4rem) clamp(1.2rem, 2.4vh, 1.7rem);
+  width: 100%;
+  padding: clamp(2.4rem, 4vh, 2.8rem) clamp(1.5rem, 2.6vw, 2.2rem) clamp(1.3rem, 2.2vh, 1.7rem);
   color: $text-blue;
-  background: rgb(255 255 255 / 78%);
-  border-radius: 999px;
+  background: rgb(255 255 255 / 88%);
+  border-radius: 32px;
 }
 
 .avatars {
   position: absolute;
   top: 0;
   left: 50%;
+  z-index: 1;
   display: flex;
-  transform: translate(-50%, -55%);
+  transform: translate(-50%, -50%);
 }
 
 .avatar {
   display: grid;
   place-items: center;
-  width: clamp(42px, 5vw, 56px);
-  height: clamp(42px, 5vw, 56px);
+  width: clamp(44px, 5.2vw, 56px);
+  height: clamp(44px, 5.2vw, 56px);
   color: #fff;
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 700;
   border: 2px solid #fff;
   border-radius: 50%;
   box-shadow: 0 4px 10px rgb(0 0 0 / 25%);
@@ -200,14 +208,15 @@ h2 {
 }
 
 .card__title {
-  margin: 0.35rem 0 0.35rem;
+  margin: 0 0 0.4rem;
   font-size: clamp(1.25rem, 2.4vw, 1.85rem);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .card__text {
   margin: 0;
-  font-size: clamp(0.85rem, 1.35vw, 1.05rem);
+  font-size: clamp(0.88rem, 1.35vw, 1.08rem);
+  font-weight: 500;
   line-height: 1.35;
 }
 
@@ -216,7 +225,7 @@ h2 {
   right: clamp(16px, 3vw, 36px);
   bottom: clamp(12px, 2.2vh, 24px);
   left: 32%;
-  z-index: 2;
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -251,6 +260,22 @@ h2 {
   100% {
     opacity: 0.9;
     translate: 12px 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .panel {
+    width: min(92%, 38rem);
+    margin: 0 auto;
+  }
+
+  .mascot {
+    max-width: 58%;
+    height: min(52%, 46vh);
+  }
+
+  .end {
+    left: 8%;
   }
 }
 </style>

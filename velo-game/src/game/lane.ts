@@ -22,6 +22,7 @@ import {
 } from 'pixi.js'
 import { raceSheetTextures, raceSprite, whiteTexture } from './assets'
 import {
+  BANNER_CAM_Z_M,
   BANNER_DISTANCE_M,
   BANNER_FADE_M,
   BANNER_GAP_M,
@@ -643,7 +644,10 @@ export class Lane {
         if (worldZ < 0 || worldZ >= untilZ) continue
         const z0 = worldZ - traveled
         const z1 = z0 + BANNER_WIDTH_M
-        const nearZ = Math.max(z0, projection.nearZ)
+        // Не клипать к projection.nearZ: это низ кадра, а не плоскость стены.
+        // Иначе весь постер натягивается на остаток и сжимается у края экрана.
+        if (z1 <= projection.nearZ) continue
+        const nearZ = Math.max(z0, BANNER_CAM_Z_M)
         const farZ = Math.min(z1, BANNER_DISTANCE_M)
         if (farZ - nearZ <= 0.08) continue
 

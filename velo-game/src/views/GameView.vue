@@ -18,9 +18,9 @@ import { useSettingsStore } from '@/stores/settings'
 const CLOCK_STEP_MS = 250
 /** Надпись выходит, когда дорога уже заметно выкатилась. */
 const FINISH_REVEAL_MS = 1200
-/** Первый попап: «Финиш!» и победитель. */
+/** Первый попап: результаты (соло или двое). */
 const FINISH_WIN_MS = 3500
-/** Второй попап: «Гонка закончена!» перед лидербордом. */
+/** Второй попап: «Гонка закончена!» — всегда последний перед лидербордом. */
 const FINISH_HOLD_MS = 4500
 /** Один такт отсчёта: появление и уход цифры / «поехали». */
 const COUNTDOWN_BEAT_MS = 950
@@ -65,12 +65,6 @@ const lanes = computed<LaneHud[]>(() =>
     }
   }),
 )
-
-const winnerName = computed(() => {
-  if (finishes.value.length === 0) return 'Игрок 1'
-  const winner = finishes.value.reduce((best, row) => (row.meters > best.meters ? row : best))
-  return winner.nick || `Игрок ${winner.index + 1}`
-})
 
 const racerNames = computed(() => {
   const names = session.racers.flatMap((racer, index) =>
@@ -121,6 +115,8 @@ async function finish(): Promise<void> {
   if (closed) return
   reveal = window.setTimeout(() => {
     if (closed) return
+    // Шаг 1 — результаты: 1 игрок = соло-карточка, 2 игрока = I/II место.
+    // Шаг 2 — всегда «Гонка закончена!».
     showFinish.value = true
     finishStep.value = 1
     toSecond = window.setTimeout(() => {
@@ -167,17 +163,20 @@ function playCountdown(step = 0): void {
 
 onMounted(async () => {
   const preview = import.meta.env.DEV ? String(router.currentRoute.value.query.popup ?? '') : ''
-  if (preview === 'finish' || preview === 'over') {
+  if (preview === 'finish' || preview === 'solo' || preview === 'over') {
+    const duo = preview !== 'solo'
     session.setRacers(
       { id: 'preview-1', nick: 'Тугарин Змей', gender: 'male' },
-      { id: 'preview-2', nick: 'Маша', gender: 'female' },
+      duo ? { id: 'preview-2', nick: 'Гонщик', gender: 'female' } : null,
       undefined,
-      2,
+      duo ? 2 : 1,
     )
-    finishes.value = [
-      { index: 0, nick: 'Тугарин Змей', meters: 120, place: 1 },
-      { index: 1, nick: 'Маша', meters: 80, place: 2 },
-    ]
+    finishes.value = duo
+      ? [
+          { index: 0, nick: 'Тугарин Змей', meters: 15_000, place: 1245 },
+          { index: 1, nick: 'Гонщик', meters: 12_000, place: 3245 },
+        ]
+      : [{ index: 0, nick: 'Тугарин Змей', meters: 15_000, place: 1245 }]
     showFinish.value = true
     finishStep.value = preview === 'over' ? 2 : 1
   } else {
@@ -244,8 +243,8 @@ onBeforeUnmount(() => {
           </p>
         </div>
       </div>
-      <div v-if="showFinish" class="stage__finish">
-        <FinishPopup v-if="finishStep === 1" :winner-name="winnerName" />
+      <div v-if="showFinish" class="stage__finish" :key="finishStep">
+        <FinishPopup v-if="finishStep === 1" :players="finishes" />
         <RaceOverPopup v-else :names="racerNames" />
       </div>
     </div>
