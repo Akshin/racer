@@ -5,7 +5,7 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getUsers, sortUsersByCreatedAt, updateUser, type VeloUser } from '@/net/usersApi'
+import { getUsers, sortUsersByCreatedAt, type VeloUser } from '@/net/usersApi'
 import { racerSheetAlias } from '@/game/racerAlias'
 import { useSessionStore } from '@/stores/session'
 
@@ -81,22 +81,6 @@ async function refresh(): Promise<void> {
   }
 }
 
-async function setGender(slot: 1 | 2, gender: Gender): Promise<void> {
-  if (slot === 1) gender1.value = gender
-  else gender2.value = gender
-
-  const id = slot === 1 ? p1.value : p2.value
-  if (id === '') return
-
-  try {
-    await updateUser(id, { gender })
-    const user = users.value.find((entry) => entry.id === id)
-    if (user !== undefined) user.gender = gender
-  } catch (error) {
-    loadError.value = error instanceof Error ? error.message : String(error)
-  }
-}
-
 function startRace(): void {
   if (!canStart.value) return
   session.setRacers(
@@ -135,13 +119,16 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="page">
+    <div class="glow" aria-hidden="true">
+      <span class="glow__spot glow__spot--top" />
+      <span class="glow__spot glow__spot--mid" />
+      <span class="glow__spot glow__spot--bot" />
+    </div>
+
     <div class="frame frame--red">
       <div class="frame frame--blue">
         <div class="stage">
-          <div class="hero">
-            <p class="bubble">Давайте начнем гонку!</p>
-            <img class="mascot" src="@/assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
-          </div>
+          <div class="hero" aria-hidden="true" />
 
           <section class="panel">
             <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
@@ -175,9 +162,9 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div class="players" :class="{ 'players--one': playerCount === 1 }">
+            <div class="players">
               <div class="player">
-                <span class="field__label">Игрок №1</span>
+                <span class="tag tag--1">Игрок №1</span>
                 <label class="select">
                   <select v-model="p1">
                     <option value="">Никнейм</option>
@@ -191,34 +178,10 @@ onBeforeUnmount(() => {
                     </option>
                   </select>
                 </label>
-                <div class="gender" role="radiogroup" aria-label="Пол игрока 1">
-                  <button
-                    type="button"
-                    class="choice"
-                    role="radio"
-                    :aria-checked="gender1 === 'male'"
-                    :class="{ 'is-on': gender1 === 'male' }"
-                    @click="setGender(1, 'male')"
-                  >
-                    <span class="tick" aria-hidden="true" />
-                    Мужской
-                  </button>
-                  <button
-                    type="button"
-                    class="choice"
-                    role="radio"
-                    :aria-checked="gender1 === 'female'"
-                    :class="{ 'is-on': gender1 === 'female' }"
-                    @click="setGender(1, 'female')"
-                  >
-                    <span class="tick" aria-hidden="true" />
-                    Женский
-                  </button>
-                </div>
               </div>
 
               <div v-if="playerCount === 2" class="player">
-                <span class="field__label">Игрок №2</span>
+                <span class="tag tag--2">Игрок №2</span>
                 <label class="select">
                   <select v-model="p2">
                     <option value="">Никнейм</option>
@@ -232,30 +195,6 @@ onBeforeUnmount(() => {
                     </option>
                   </select>
                 </label>
-                <div class="gender" role="radiogroup" aria-label="Пол игрока 2">
-                  <button
-                    type="button"
-                    class="choice"
-                    role="radio"
-                    :aria-checked="gender2 === 'male'"
-                    :class="{ 'is-on': gender2 === 'male' }"
-                    @click="setGender(2, 'male')"
-                  >
-                    <span class="tick" aria-hidden="true" />
-                    Мужской
-                  </button>
-                  <button
-                    type="button"
-                    class="choice"
-                    role="radio"
-                    :aria-checked="gender2 === 'female'"
-                    :class="{ 'is-on': gender2 === 'female' }"
-                    @click="setGender(2, 'female')"
-                  >
-                    <span class="tick" aria-hidden="true" />
-                    Женский
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -269,33 +208,85 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <div class="character">
+      <p class="bubble">
+        Давайте <br />
+        начнем гонку!
+      </p>
+      <img class="mascot" src="@/assets/images/MASCOT_FULL.png" alt="" draggable="false" />
+    </div>
   </main>
 </template>
 
 <style scoped lang="scss">
 $red: #ff2b42;
 $blue: #0077ff;
-$navy: #07101c;
+$glow: #0040ff;
 $text-dark: #1a2740;
+$bubble-start: #2e54f1;
+$bubble-end: #c5d2f8;
+$bubble-bot: #8ea4f5;
 
 .page {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100dvh;
   padding: clamp(10px, 2.2vh, 28px);
   overflow: hidden;
-  background: $navy;
-  box-shadow: 0 0 182px 0 #0040ff inset;
+  background: #0e1a50;
   -webkit-tap-highlight-color: transparent;
 }
 
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glow__spot {
+  position: absolute;
+  border-radius: 50%;
+  background: $glow;
+  opacity: 0.9;
+
+  &--top {
+    width: 58%;
+    height: 70%;
+    left: 6%;
+    top: -28%;
+    filter: blur(180px);
+  }
+
+  &--mid {
+    width: 46%;
+    height: 52%;
+    left: 18%;
+    top: 18%;
+    opacity: 0.55;
+    filter: blur(160px);
+  }
+
+  &--bot {
+    width: 42%;
+    height: 38%;
+    left: 8%;
+    bottom: -18%;
+    filter: blur(90px);
+  }
+}
+
 .frame {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   border-radius: clamp(14px, 2.2vw, 25px);
 
   &--red {
@@ -305,8 +296,8 @@ $text-dark: #1a2740;
   }
 
   &--blue {
-    overflow: hidden;
-    padding: clamp(10px, 2vh, 28px) clamp(14px, 2.2vw, 32px);
+    overflow: visible;
+    padding: clamp(10px, 2vh, 28px) clamp(18px, 2.6vw, 40px) clamp(16px, 2.4vh, 28px);
     border: clamp(3px, 0.6vw, 7px) solid $blue;
     box-shadow: 0 0 18px rgba($blue, 0.28);
   }
@@ -315,8 +306,8 @@ $text-dark: #1a2740;
 .stage {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 34rem);
-  gap: clamp(12px, 2vw, 32px);
+  grid-template-columns: minmax(0, 0.85fr) minmax(20rem, 1.15fr);
+  gap: clamp(12px, 2vw, 40px);
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -324,73 +315,91 @@ $text-dark: #1a2740;
 }
 
 .hero {
-  position: relative;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+}
+
+.character {
+  position: absolute;
+  left: -23px;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 38%;
+  pointer-events: none;
 }
 
 .bubble {
   position: relative;
-  z-index: 2;
-  max-width: min(100%, 22rem);
-  margin: clamp(4px, 1.5vh, 20px) 0 0 clamp(8px, 2vw, 36px);
-  padding: clamp(14px, 2vh, 22px) clamp(16px, 1.8vw, 26px);
+  z-index: 1;
+  margin: 0 0 0 30%;
+  padding: 40px 70px;
   color: #fff;
-  font-size: clamp(1.05rem, 1.8vw, 1.5rem);
-  font-weight: 700;
-  line-height: 1.3;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #003180 0%, #4c9ef8 50%, #9cbefb 100%);
+  font-size: clamp(1.15rem, 1.1rem + 0.7vw, 1.85rem);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  border-radius: 28px;
+  background: linear-gradient(315deg, $bubble-start 0%, $bubble-end 100%);
 
   &::after {
     content: '';
     position: absolute;
-    left: 18%;
-    bottom: -14px;
-    border: 10px solid transparent;
-    border-top-color: #6aa9f4;
+    left: 28%;
+    bottom: -16px;
+    border: 12px solid transparent;
+    border-top-color: $bubble-bot;
     border-bottom-width: 0;
   }
 }
 
-.mascot {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  z-index: 1;
-  width: auto;
-  max-width: 100%;
+.logo {
+  display: block;
+  width: min(100%, 210px);
   height: auto;
-  max-height: 82%;
-  object-fit: contain;
-  object-position: left bottom;
+  margin: 0 auto;
   pointer-events: none;
   user-select: none;
 }
 
+.mascot {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: min(52vh, 460px);
+  object-fit: contain;
+  object-position: left bottom;
+  user-select: none;
+}
+
 .panel {
+  position: relative;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(10px, 1.6vh, 18px);
+  align-self: center;
+  gap: clamp(14px, 2.2vh, 22px);
+  width: 100%;
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  z-index: 2;
-}
+  justify-self: end;
+  scrollbar-width: none;
 
-.logo {
-  width: min(100%, 220px);
-  height: auto;
-  margin: 0 auto;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 h1 {
   margin: 0;
   color: #fff;
-  font-size: clamp(1.5rem, 2.6vw, 2.35rem);
-  font-weight: 700;
+  font-size: 70px;
+  font-weight: 500;
   text-align: center;
 }
 
@@ -405,26 +414,30 @@ h1 {
 
 .field {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.55rem;
 }
 
 .field__label {
   color: #fff;
-  font-size: clamp(0.95rem, 1.2vw, 1.15rem);
+  font-size: clamp(1rem, 1.3vw, 1.2rem);
   font-weight: 500;
+  text-align: center;
 }
 
 .mode {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 0.85rem;
+  width: 350px;
+  margin: 0 auto 26px auto;
 }
 
 .mode__btn {
-  height: clamp(44px, 5.8vh, 52px);
+  height: clamp(46px, 6vh, 54px);
   color: #fff;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
+  cursor: pointer;
   background: transparent;
   border: 2px solid #fff;
   border-radius: 999px;
@@ -437,27 +450,49 @@ h1 {
 
 .players {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(12px, 2vw, 20px);
-
-  &--one {
-    grid-template-columns: 1fr;
-  }
+  gap: clamp(12px, 1.8vh, 18px);
+  width: 500px;
+  margin: 0 auto;
 }
 
 .player {
   display: grid;
-  gap: 0.55rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
   min-width: 0;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 7.2rem;
+  height: clamp(46px, 6vh, 54px);
+  padding: 0 1.15rem;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+  border-radius: 999px;
+
+  &--1 {
+    background: $blue;
+  }
+
+  &--2 {
+    background: $red;
+  }
 }
 
 .select {
   position: relative;
   display: block;
+  min-width: 0;
 
   select {
     width: 100%;
-    height: clamp(48px, 6vh, 56px);
+    height: clamp(46px, 6vh, 54px);
     padding: 0 2.6rem 0 1.2rem;
     color: $text-dark;
     font-size: max(16px, 1.05rem);
@@ -466,6 +501,7 @@ h1 {
     border-radius: 999px;
     outline: none;
     appearance: none;
+    -webkit-appearance: none;
 
     &:focus {
       box-shadow: 0 0 0 2px rgba($blue, 0.55);
@@ -487,68 +523,14 @@ h1 {
   }
 }
 
-.gender {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-}
-
-.choice {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  min-height: clamp(42px, 5.4vh, 50px);
-  padding: 0 0.7rem;
-  color: #fff;
-  font-size: 0.92rem;
-  font-weight: 500;
-  text-align: left;
-  background: rgba(18, 26, 40, 0.78);
-  border: 1.5px solid rgba(255, 255, 255, 0.55);
-  border-radius: 14px;
-
-  &.is-on {
-    border-color: $red;
-  }
-}
-
-.tick {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-
-  &::after {
-    content: '';
-    width: 4px;
-    height: 8px;
-    margin-top: -1px;
-    border-right: 2px solid #fff;
-    border-bottom: 2px solid #fff;
-    opacity: 0;
-    transform: rotate(45deg);
-  }
-}
-
-.choice.is-on .tick {
-  background: $red;
-  border-color: $red;
-
-  &::after {
-    opacity: 1;
-  }
-}
-
 .submit {
-  width: 100%;
+  width: 340px;
+  margin: 40px auto 0 auto;
   height: clamp(52px, 7vh, 64px);
-  margin-top: 0.25rem;
   color: #fff;
-  font-size: clamp(1.1rem, 1.7vw, 1.4rem);
+  font-size: clamp(1.15rem, 1.8vw, 1.45rem);
   font-weight: 700;
+  cursor: pointer;
   background: $red;
   border: 0;
   border-radius: 999px;
@@ -581,20 +563,30 @@ h1 {
   }
 
   .hero {
-    min-height: 28vh;
+    min-height: 0;
+  }
+
+  .character {
+    left: 50%;
+    max-width: 72%;
+    transform: translateX(-50%);
+    align-items: center;
+  }
+
+  .bubble {
+    margin-left: 0;
   }
 
   .mascot {
-    max-height: 92%;
+    height: min(36vh, 300px);
   }
 
-  .players {
-    grid-template-columns: 1fr;
+  .panel {
+    justify-self: stretch;
+    width: 100%;
   }
-}
 
-@media (max-width: 720px) {
-  .players {
+  .player {
     grid-template-columns: 1fr;
   }
 }

@@ -2,32 +2,31 @@
 /**
  * Турнирная таблица зала в киосковой рамке.
  * Скорость считаем из лучшего заезда за минуту: метры / время.
+ * Слева — ролики витрины: четыре файла по кругу, старт при входе на страницу.
  */
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
+import clip1 from '@/assets/video/1.mp4'
+import clip2 from '@/assets/video/2.mp4'
+import clip3 from '@/assets/video/3.mp4'
+import clip4 from '@/assets/video/4.mp4'
 import { RACE_DURATION_MS } from '@/game/config'
 import { getUsers, sortUsersByMeters, type VeloUser } from '@/net/usersApi'
 
 const POLL_MS = 2000
-const PAGE_SIZE = 10
 const HOURS = RACE_DURATION_MS / 3_600_000
+const CLIPS = [clip1, clip2, clip3, clip4] as const
 
 const users = ref<VeloUser[]>([])
 const loadError = ref('')
-const page = ref(1)
+const clipIndex = ref(0)
+const player = useTemplateRef<HTMLVideoElement>('player')
 
 let inflight = false
 let poll: number | undefined
+let closed = false
 
 const leaders = computed(() => sortUsersByMeters(users.value))
-const pageCount = computed(() => Math.max(1, Math.ceil(leaders.value.length / PAGE_SIZE)))
-const pageRows = computed(() => {
-  const start = (page.value - 1) * PAGE_SIZE
-  return leaders.value.slice(start, start + PAGE_SIZE)
-})
-const bikeLeft = computed(() => {
-  if (pageCount.value <= 1) return '12%'
-  return `${((page.value - 1) / (pageCount.value - 1)) * 100}%`
-})
+const clipSrc = computed(() => CLIPS[clipIndex.value] ?? clip1)
 
 async function refresh(): Promise<void> {
   if (inflight) return
@@ -43,7 +42,7 @@ async function refresh(): Promise<void> {
 }
 
 function formatRank(index: number): string {
-  return String((page.value - 1) * PAGE_SIZE + index + 1).padStart(4, '0')
+  return String(index + 1).padStart(4, '0')
 }
 
 function formatSpeed(meters: number | null): string {
@@ -56,40 +55,60 @@ function formatDistance(meters: number | null): string {
   return `${(meters / 1000).toFixed(2)} км`
 }
 
-function goPage(next: number): void {
-  page.value = Math.min(pageCount.value, Math.max(1, next))
+async function tryPlay(): Promise<void> {
+  const el = player.value
+  if (el === null || closed) return
+  el.muted = true
+  await el.play().catch(() => undefined)
 }
 
-function onSliderClick(event: MouseEvent): void {
-  const track = event.currentTarget as HTMLElement
-  const x = event.clientX - track.getBoundingClientRect().left
-  const ratio = track.clientWidth <= 0 ? 0 : Math.min(1, Math.max(0, x / track.clientWidth))
-  goPage(Math.round(ratio * (pageCount.value - 1)) + 1)
+function onClipEnded(): void {
+  if (closed) return
+  clipIndex.value = (clipIndex.value + 1) % CLIPS.length
 }
-
-watch(pageCount, (count) => {
-  if (page.value > count) page.value = count
-})
 
 onMounted(() => {
   void refresh()
   poll = window.setInterval(() => void refresh(), POLL_MS)
+  void tryPlay()
 })
 
 onBeforeUnmount(() => {
+  closed = true
   window.clearInterval(poll)
+  const el = player.value
+  if (el === null) return
+  el.pause()
+  el.removeAttribute('src')
+  el.load()
 })
 </script>
 
 <template>
   <main class="page">
+    <div class="glow" aria-hidden="true">
+      <span class="glow__spot glow__spot--top" />
+      <span class="glow__spot glow__spot--mid" />
+      <span class="glow__spot glow__spot--bot" />
+    </div>
+
     <div class="frame frame--red">
       <div class="frame frame--blue">
         <div class="stage">
           <div class="hero">
             <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
-            <p class="bubble">Наша турнирная таблица</p>
-            <img class="mascot" src="@/assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
+            <div class="reel">
+              <video
+                ref="player"
+                :src="clipSrc"
+                muted
+                autoplay
+                playsinline
+                preload="auto"
+                @ended="onClipEnded"
+                @loadeddata="tryPlay"
+              />
+            </div>
           </div>
 
           <section class="board">
@@ -100,19 +119,19 @@ onBeforeUnmount(() => {
                 <thead>
                   <tr>
                     <th class="rank">Позиция</th>
-                    <th>Никнейм</th>
+                    <th class="nick">Никнейм</th>
                     <th class="num">Средняя скорость</th>
                     <th class="num">Макс. Расстояние</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(user, index) in pageRows" :key="user.id">
+                  <tr v-for="(user, index) in leaders" :key="user.id">
                     <td class="rank">{{ formatRank(index) }}</td>
                     <td class="nick">{{ user.nick }}</td>
                     <td class="num">{{ formatSpeed(user.meters) }}</td>
                     <td class="num">{{ formatDistance(user.meters) }}</td>
                   </tr>
-                  <tr v-if="pageRows.length === 0">
+                  <tr v-if="leaders.length === 0">
                     <td colspan="4" class="empty">Пока никого нет</td>
                   </tr>
                 </tbody>
@@ -120,55 +139,91 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="foot">
-              <button
-                class="slider"
-                type="button"
-                :disabled="pageCount <= 1"
-                @click="onSliderClick"
-              >
-                <span class="slider__line" />
+              <div class="rail" aria-hidden="true">
+                <span class="rail__line" />
                 <img
-                  class="slider__bike"
+                  class="rail__bike"
                   src="@/assets/images/white_biker.png"
                   alt=""
                   draggable="false"
-                  :style="{ left: bikeLeft }"
                 />
-              </button>
-              <div class="foot__meta">
-                <RouterLink class="start" to="/start">Начать игру</RouterLink>
               </div>
+              <RouterLink class="start" to="/start">Начать игру</RouterLink>
             </div>
           </section>
         </div>
       </div>
     </div>
+
+    <img class="mascot" src="@/assets/images/MASCOT_FULL.png" alt="" draggable="false" />
   </main>
 </template>
 
 <style scoped lang="scss">
 $red: #ff2b42;
 $blue: #0077ff;
-$navy: #07101c;
-$grid: rgba(90, 170, 255, 0.45);
+$glow: #0040ff;
+$line: rgba(255, 255, 255, 0.35);
 
 .page {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100dvh;
   padding: clamp(10px, 2.2vh, 28px);
   overflow: hidden;
-  background: $navy;
-  box-shadow: 0 0 182px 0 #0040ff inset;
+  background: #0e1a50;
   -webkit-tap-highlight-color: transparent;
 }
 
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glow__spot {
+  position: absolute;
+  border-radius: 50%;
+  background: $glow;
+  opacity: 0.9;
+
+  &--top {
+    width: 58%;
+    height: 70%;
+    left: 6%;
+    top: -28%;
+    filter: blur(180px);
+  }
+
+  &--mid {
+    width: 46%;
+    height: 52%;
+    left: 18%;
+    top: 18%;
+    opacity: 0.55;
+    filter: blur(160px);
+  }
+
+  &--bot {
+    width: 42%;
+    height: 38%;
+    left: 8%;
+    bottom: -18%;
+    filter: blur(90px);
+  }
+}
+
 .frame {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
+  overflow: visible;
   border-radius: clamp(14px, 2.2vw, 25px);
 
   &--red {
@@ -187,8 +242,8 @@ $grid: rgba(90, 170, 255, 0.45);
 
 .stage {
   display: grid;
-  grid-template-columns: minmax(0, 0.38fr) minmax(0, 1fr);
-  gap: clamp(8px, 1.6vw, 24px);
+  grid-template-columns: minmax(0, 0.58fr) minmax(0, 1fr);
+  gap: clamp(12px, 2vw, 32px);
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -197,7 +252,10 @@ $grid: rgba(90, 170, 255, 0.45);
 
 .hero {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 2vh, 22px);
   min-width: 0;
   min-height: 0;
 }
@@ -207,41 +265,36 @@ $grid: rgba(90, 170, 255, 0.45);
   z-index: 2;
   width: min(100%, clamp(140px, 16vw, 210px));
   height: auto;
+  pointer-events: none;
+  user-select: none;
 }
 
-.bubble {
+.reel {
   position: relative;
   z-index: 2;
-  max-width: min(100%, 16rem);
-  margin: clamp(10px, 2vh, 22px) 0 0 0;
-  padding: clamp(12px, 1.8vh, 18px) clamp(14px, 1.6vw, 22px);
-  color: #fff;
-  font-size: clamp(0.95rem, 1.4vw, 1.25rem);
-  font-weight: 700;
-  line-height: 1.3;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #003180 0%, #4c9ef8 50%, #9cbefb 100%);
+  width: 100%;
+  max-width: none;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: #d9d9d9;
+  border-radius: 12px;
 
-  &::after {
-    content: '';
-    position: absolute;
-    left: 22%;
-    bottom: -12px;
-    border: 9px solid transparent;
-    border-top-color: #6aa9f4;
-    border-bottom-width: 0;
+  video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 }
 
 .mascot {
   position: absolute;
-  left: calc(-1 * clamp(18px, 3.2vw, 40px));
-  bottom: calc(-1 * clamp(8px, 1.8vh, 22px));
-  z-index: 2;
+  left: -23px;
+  bottom: 0;
+  z-index: 3;
   width: auto;
-  max-width: 100%;
-  height: auto;
-  max-height: 86%;
+  max-width: 34%;
+  height: min(58%, 50vh);
   object-fit: contain;
   object-position: left bottom;
   pointer-events: none;
@@ -254,7 +307,7 @@ $grid: rgba(90, 170, 255, 0.45);
   gap: clamp(10px, 1.6vh, 18px);
   min-width: 0;
   min-height: 0;
-  z-index: 3;
+  z-index: 4;
 }
 
 .banner {
@@ -269,25 +322,48 @@ $grid: rgba(90, 170, 255, 0.45);
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: clamp(0.82rem, 1.15vw, 1.05rem);
+  font-size: 20px;
 }
 
 th,
 td {
-  padding: clamp(0.45rem, 1.1vh, 0.75rem) clamp(0.5rem, 1.1vw, 0.9rem);
-  border: 1px solid $grid;
-  text-align: left;
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 0.9rem;
+  text-align: center;
+  vertical-align: middle;
   white-space: nowrap;
+  border: 0;
+  border-bottom: 1px solid #fff;
 }
 
 th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   color: #fff;
   font-weight: 600;
+  background: none;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+th + th,
+td + td {
+  border-left: 1px solid $line;
+}
+
+tbody tr:nth-child(even) td {
+  background: #0277ff33;
 }
 
 .rank {
@@ -300,6 +376,7 @@ th {
 }
 
 .nick {
+  text-align: left;
   font-weight: 600;
 }
 
@@ -309,48 +386,38 @@ th {
 }
 
 .foot {
-  display: grid;
-  gap: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 24px);
 }
 
-.slider {
+.rail {
   position: relative;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 36px;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-
-  &:disabled {
-    cursor: default;
-  }
 }
 
-.slider__line {
+.rail__line {
   position: absolute;
   top: 50%;
   right: 0;
   left: 0;
   height: 2px;
-  background: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(90deg, #fff 0%, #fff 62%, rgb(255 255 255 / 28%) 62%);
   transform: translateY(-50%);
 }
 
-.slider__bike {
+.rail__bike {
   position: absolute;
   top: 50%;
+  left: 62%;
   width: auto;
   height: 28px;
   mix-blend-mode: screen;
-  transform: translate(-20%, -50%);
+  filter: drop-shadow(-14px 0 8px rgb(255 255 255 / 55%));
+  transform: translate(-100px, -30px);
   pointer-events: none;
-}
-
-.foot__meta {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
 }
 
 .start {
@@ -376,13 +443,20 @@ th {
 @media (orientation: portrait) {
   .stage {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(160px, 28vh) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .reel {
+    max-width: 100%;
+    max-height: 22vh;
   }
 
   .mascot {
-    left: -12px;
-    max-width: 70%;
-    max-height: 92%;
+    max-width: 72%;
+    height: min(42vh, 360px);
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
   }
 }
 </style>
