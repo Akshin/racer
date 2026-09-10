@@ -6,6 +6,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createUser } from '@/net/usersApi'
+import bubbleBlack from '@/assets/images/bubble-black-1.png'
 
 const NICK_MAX = 20
 const PHONE_LOCAL_DIGITS = 10
@@ -119,101 +120,97 @@ async function onSubmit(): Promise<void> {
 
     <div class="frame frame--red">
       <div class="frame frame--blue">
-        <img class="logo" src="../assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+        <section class="section-1">
+          <img src="../assets/images/mascot.png" alt="" draggable="false" />
+          <p class="bubble" :style="{ '--bubble-bg': `url(${bubbleBlack})` }">
+            <span>Введи свой никнейм</span>
+            <span>и номер телефона, чтобы</span>
+            <span>ты смог забрать приз!</span>
+          </p>
+        </section>
 
-        <div class="stage">
-          <div class="hero">
-            <p class="bubble">
-              Введи свой никнейм<br />
-              и номер телефона, чтобы<br />
-              ты смог забрать приз!
-            </p>
-          </div>
+        <section class="section-2">
+          <img class="logo" src="../assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
 
-          <section class="panel">
-            <form class="form" autocomplete="off" novalidate @submit.prevent="onSubmit">
-              <p v-if="error" class="banner error" role="alert">{{ error }}</p>
+          <form class="form" autocomplete="off" novalidate>
+            <label class="field">
+              <span class="field__label">Никнейм</span>
+              <input
+                :value="nick"
+                name="nick"
+                type="text"
+                maxlength="20"
+                required
+                placeholder="Введите никнейм"
+                enterkeyhint="next"
+                autocapitalize="words"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                @input="onNickInput"
+              />
+            </label>
 
-              <label class="field">
-                <span class="field__label">Никнейм</span>
-                <input
-                  :value="nick"
-                  name="nick"
-                  type="text"
-                  maxlength="20"
-                  required
-                  placeholder="Введите никнейм"
-                  enterkeyhint="next"
-                  autocapitalize="words"
-                  autocomplete="off"
-                  autocorrect="off"
-                  spellcheck="false"
-                  @input="onNickInput"
-                />
-              </label>
+            <label class="field">
+              <span class="field__label">Телефон</span>
+              <input
+                :value="phoneDisplay"
+                name="phone"
+                type="tel"
+                inputmode="numeric"
+                enterkeyhint="done"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                @beforeinput="onPhoneBeforeInput"
+                @input="onPhoneInput"
+                @focus="placePhoneCaretAtEnd"
+              />
+            </label>
 
-              <label class="field">
-                <span class="field__label">Телефон</span>
-                <input
-                  :value="phoneDisplay"
-                  name="phone"
-                  type="tel"
-                  inputmode="numeric"
-                  enterkeyhint="done"
-                  autocomplete="off"
-                  autocorrect="off"
-                  spellcheck="false"
-                  @beforeinput="onPhoneBeforeInput"
-                  @input="onPhoneInput"
-                  @focus="placePhoneCaretAtEnd"
-                />
-              </label>
-
-              <div class="field gender">
-                <span id="gender-label" class="field__label">Пол</span>
-                <div class="gender__row" role="radiogroup" aria-labelledby="gender-label">
-                  <button
-                    type="button"
-                    class="choice"
-                    role="radio"
-                    :aria-checked="gender === 'male'"
-                    :class="{ 'is-on': gender === 'male' }"
-                    @click="gender = 'male'"
-                  >
-                    <span class="tick" aria-hidden="true" />
-                    Мужской
-                  </button>
-                  <button
-                    type="button"
-                    class="choice"
-                    role="radio"
-                    :aria-checked="gender === 'female'"
-                    :class="{ 'is-on': gender === 'female' }"
-                    @click="gender = 'female'"
-                  >
-                    <span class="tick" aria-hidden="true" />
-                    Женский
-                  </button>
-                </div>
+            <div class="field gender">
+              <span id="gender-label" class="field__label">Пол</span>
+              <div class="gender__row" role="radiogroup" aria-labelledby="gender-label">
+                <button
+                  type="button"
+                  class="choice"
+                  role="radio"
+                  :aria-checked="gender === 'male'"
+                  :class="{ 'is-on': gender === 'male' }"
+                  @click="gender = 'male'"
+                >
+                  <span class="tick" aria-hidden="true" />
+                  Мужской
+                </button>
+                <button
+                  type="button"
+                  class="choice"
+                  role="radio"
+                  :aria-checked="gender === 'female'"
+                  :class="{ 'is-on': gender === 'female' }"
+                  @click="gender = 'female'"
+                >
+                  <span class="tick" aria-hidden="true" />
+                  Женский
+                </button>
               </div>
+            </div>
 
-              <label class="consent" :class="{ 'is-on': consent }">
-                <input v-model="consent" class="sr-only" type="checkbox" name="consent" />
-                <span class="tick" aria-hidden="true" />
-                Согласие на обработку персональных данных
-              </label>
+            <label class="consent" :class="{ 'is-on': consent }">
+              <input v-model="consent" class="sr-only" type="checkbox" name="consent" />
+              <span class="tick" aria-hidden="true" />
+              Согласие на обработку персональных данных
+            </label>
 
-              <p class="legal">
-                Я даю <span>согласие</span> на обработку персональных данных для цели получения
-                рекламных и информационных сообщений.
-              </p>
-
-              <button class="submit" type="submit" :disabled="!canSubmit">
-                {{ submitting ? 'Сохраняю…' : 'Принять участие' }}
-              </button>
-            </form>
-          </section>
-        </div>
+            <p class="legal">
+              Я даю <span>согласие</span> на обработку персональных данных для цели получения
+              рекламных и информационных сообщений.
+            </p>
+          </form>
+          <button class="submit" type="submit" :disabled="!canSubmit" @click="onSubmit">
+            {{ submitting ? 'Сохраняю…' : 'Принять участие' }}
+          </button>
+        </section>
       </div>
     </div>
     <img class="mascot" src="../assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
@@ -224,13 +221,7 @@ async function onSubmit(): Promise<void> {
 $red: #ff2b42;
 $blue: #0077ff;
 $glow: #0040ff;
-$field-bg: rgba(255, 255, 255, 0.4);
-$field-text: #313131;
-$muted: #c7c7c7;
-$choice-off: #c8c8c8;
-$bubble-start: #2e54f1;
-$bubble-end: #c5d2f8;
-$bubble-bot: #a8b8f6;
+$bubble: #0040ff;
 
 .page {
   position: relative;
@@ -239,8 +230,18 @@ $bubble-bot: #a8b8f6;
   height: 100%;
   padding: clamp(12px, 2.4vh, 32px);
   overflow: hidden;
-  background: #0e1a50;
+  background: #000;
+  cursor: pointer;
+  user-select: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .glow {
@@ -300,310 +301,239 @@ $bubble-bot: #a8b8f6;
   }
 
   &--blue {
-    padding: clamp(56px, 9vh, 76px) clamp(18px, 2.6vw, 40px) clamp(16px, 2.4vh, 28px);
     overflow: visible;
     border: clamp(4px, 0.65vw, 7px) solid $blue;
     box-shadow: 0 0 18px rgba($blue, 0.28);
+    display: flex;
+    position: relative;
   }
 }
 
-.stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 32rem);
-  gap: clamp(12px, 2.4vw, 40px);
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-}
-
-.hero {
+.section-1 {
+  width: 48%;
   position: relative;
-  z-index: 4;
-  align-self: start;
-  min-width: 0;
-  padding: 40px 30px 0 30px;
-}
 
-.bubble {
-  position: relative;
-  width: min(100%, 25rem);
-  margin: 0;
-  padding: clamp(16px, 2.2vh, 26px) clamp(18px, 2vw, 28px);
-  color: #fff;
-  font-size: clamp(1.15rem, 1.1rem + 0.7vw, 1.85rem);
-  font-weight: 500;
-  line-height: 1.1;
-  text-align: center;
-  border-radius: 28px;
-  background: linear-gradient(315deg, $bubble-start 0%, $bubble-end 100%);
-
-  &::after {
-    content: '';
+  img {
     position: absolute;
-    left: 18%;
-    bottom: -16px;
-    border: 12px solid transparent;
-    border-top-color: $bubble-bot;
-    border-bottom-width: 0;
-  }
-}
-
-.logo {
-  position: absolute;
-  top: 40px;
-  left: 50%;
-  z-index: 6;
-  width: min(42vw, 210px);
-  height: auto;
-  transform: translateX(-50%);
-  pointer-events: none;
-  user-select: none;
-}
-
-.mascot {
-  position: absolute;
-  left: -23px;
-  bottom: 0;
-  z-index: 3;
-  width: auto;
-  max-width: 58%;
-  height: min(92%, 78vh);
-  object-fit: contain;
-  object-position: left bottom;
-  pointer-events: none;
-  user-select: none;
-}
-
-.panel {
-  position: relative;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-self: center;
-  width: min(100%, 31rem);
-  min-width: 0;
-  min-height: 0;
-  justify-self: end;
-}
-
-.form {
-  display: grid;
-  gap: clamp(14px, 2.2vh, 26px);
-}
-
-.banner {
-  margin: 0;
-  padding: 0.65rem 0.9rem;
-  border-radius: 12px;
-  font-size: 0.95rem;
-
-  &.error {
-    color: #ffd0d5;
-    background: rgba($red, 0.18);
-  }
-}
-
-.field {
-  display: grid;
-  gap: 0.45rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-
-.field__label {
-  color: #fff;
-  font-size: clamp(1rem, 1.15vw, 1.25rem);
-  font-weight: 700;
-  font-size: 20px;
-}
-
-.field input {
-  width: 100%;
-  height: clamp(46px, 5.8vh, 54px);
-  padding: 0 1rem;
-  color: $field-text;
-  font-size: 20px;
-  font-weight: 500;
-  background: $field-bg;
-  border: 0;
-  border-radius: 13px;
-  outline: none;
-  appearance: none;
-
-  &::placeholder {
-    color: $field-text;
-    opacity: 0.72;
-  }
-
-  &:focus {
-    box-shadow: 0 0 0 2px rgba($blue, 0.65);
-  }
-}
-
-.gender__row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.9rem;
-}
-
-.choice,
-.consent {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  width: 100%;
-  min-height: clamp(46px, 5.8vh, 52px);
-  padding: 0 0.85rem;
-  color: #fff;
-  font-size: clamp(0.95rem, 1.05vw, 1.125rem);
-  font-weight: 500;
-  text-align: left;
-  background: transparent;
-  border: 2.5px solid $choice-off;
-  border-radius: 13px;
-  user-select: none;
-}
-
-.consent {
-  font-size: clamp(0.88rem, 1vw, 1.05rem);
-  line-height: 1.2;
-}
-
-.choice.is-on,
-.consent.is-on {
-  border-color: $red;
-}
-
-.tick {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-
-  &::after {
-    content: '';
-    width: 5px;
-    height: 9px;
-    margin-top: -1px;
-    border-right: 2px solid #fff;
-    border-bottom: 2px solid #fff;
-    opacity: 0;
-    transform: rotate(45deg);
-  }
-}
-
-.consent .tick {
-  border-radius: 6px;
-}
-
-.choice.is-on .tick,
-.consent.is-on .tick {
-  background: $red;
-  border-color: $red;
-
-  &::after {
-    opacity: 1;
-  }
-}
-
-.legal {
-  margin: 0;
-  color: $muted;
-  font-size: clamp(0.8rem, 0.95vw, 1.05rem);
-  font-weight: 500;
-  line-height: 1.35;
-
-  span {
-    color: $red;
-  }
-}
-
-.submit {
-  width: 100%;
-  height: clamp(52px, 6.6vh, 62px);
-  margin-top: 0.15rem;
-  color: #fff;
-  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
-  font-weight: 500;
-  background: $red;
-  border: 0;
-  border-radius: 999px;
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-
-  &:not(:disabled):active {
-    filter: brightness(0.92);
-  }
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-@media (orientation: portrait) {
-  .page {
-    overflow: auto;
-  }
-
-  .frame--blue {
-    padding-top: clamp(64px, 10vh, 84px);
-  }
-
-  .stage {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-
-  .hero {
-    min-height: auto;
-  }
-
-  .mascot {
-    max-width: 72%;
-    height: min(42vh, 360px);
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-  }
-
-  .panel {
-    justify-self: stretch;
+    left: -60px;
+    bottom: -180px;
+    z-index: 3;
     width: 100%;
-    padding-bottom: 8px;
-  }
-}
-
-@media (max-height: 700px) and (orientation: landscape) {
-  .frame--blue {
-    padding-top: clamp(44px, 8vh, 60px);
-    padding-bottom: 10px;
-  }
-
-  .form {
-    gap: 10px;
+    height: 100%;
+    object-fit: contain;
+    object-position: left bottom;
+    pointer-events: none;
+    user-select: none;
   }
 
   .bubble {
-    font-size: 1.15rem;
-    padding: 12px 16px;
+    position: relative;
+    z-index: 4;
+    box-sizing: border-box;
+    aspect-ratio: 583 / 274;
+    margin: 0;
+    padding: 12% 8% 17%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.1;
+    text-align: center;
+    pointer-events: none;
+    width: 369px;
+    left: 61px;
+    bottom: -40px;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: var(--bubble-bg) no-repeat center / 96% 80%;
+      pointer-events: none;
+      left: 6px;
+      bottom: -19px;
+    }
+
+    span {
+      display: block;
+      white-space: nowrap;
+    }
+  }
+}
+
+.section-2 {
+  display: flex;
+  flex-direction: column;
+  width: 52%;
+  height: 100%;
+  align-items: center;
+  padding: 45px 36px 35px 0;
+  .logo {
+    width: 204px;
+    margin-bottom: 48px;
+  }
+  .submit {
+    width: 100%;
+    height: 60px;
+    border-radius: 40px;
+    background: $red;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: auto;
+    border: 0;
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    &:not(:disabled):active {
+      filter: brightness(0.92);
+    }
+  }
+
+  .form {
+    display: grid;
+    gap: clamp(14px, 2.2vh, 26px);
+  }
+
+  .field {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+
+  .field__label {
+    color: #fff;
+    font-size: clamp(1rem, 1.15vw, 1.25rem);
+    font-weight: 700;
+    font-size: 20px;
+  }
+
+  .field input {
+    width: 100%;
+    height: clamp(46px, 5.8vh, 54px);
+    padding: 0 1rem;
+    color: #000;
+    font-size: 20px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.4);
+    border: 0;
+    border-radius: 13px;
+    outline: none;
+    appearance: none;
+
+    &::placeholder {
+      color: #313131;
+      opacity: 0.72;
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 2px rgba($blue, 0.65);
+    }
+  }
+
+  .gender__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+  }
+
+  .choice,
+  .consent {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    min-height: clamp(46px, 5.8vh, 52px);
+    padding: 0 0.85rem;
+    color: #fff;
+    font-size: clamp(0.95rem, 1.05vw, 1.125rem);
+    font-weight: 500;
+    text-align: left;
+    background: transparent;
+    border: 2.5px solid #c8c8c8;
+    border-radius: 13px;
+    user-select: none;
+  }
+
+  .consent {
+    font-size: clamp(0.88rem, 1vw, 1.05rem);
+    line-height: 1.2;
+  }
+
+  .choice.is-on,
+  .consent.is-on {
+    border-color: $red;
+  }
+
+  .tick {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+
+    &::after {
+      content: '';
+      width: 5px;
+      height: 9px;
+      margin-top: -1px;
+      border-right: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      opacity: 0;
+      transform: rotate(45deg);
+    }
+  }
+
+  .consent .tick {
+    border-radius: 6px;
+  }
+
+  .choice.is-on .tick,
+  .consent.is-on .tick {
+    background: $red;
+    border-color: $red;
+
+    &::after {
+      opacity: 1;
+    }
+  }
+
+  .legal {
+    margin: 0;
+    color: #c7c7c7;
+    font-size: clamp(0.8rem, 0.95vw, 1.05rem);
+    font-weight: 500;
+    line-height: 1.35;
+
+    span {
+      color: $red;
+    }
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 }
 </style>

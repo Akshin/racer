@@ -1,48 +1,16 @@
 <script setup lang="ts">
-/**
- * Экран после удачной регистрации: ждём сотрудника.
- * Через 3 секунды или по клику возвращаемся к форме — киоск готов к следующему человеку.
- */
-import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-
-const RETURN_MS = 4000
+import bubbleBlue from '@/assets/images/bubble-blue.png'
 
 const router = useRouter()
-let timer: number | undefined
-let left = false
 
 function goToRegister(): void {
-  if (left) return
-  left = true
-  if (timer !== undefined) {
-    window.clearTimeout(timer)
-    timer = undefined
-  }
   void router.replace({ name: 'register' })
 }
-
-onMounted(() => {
-  timer = window.setTimeout(goToRegister, RETURN_MS)
-})
-
-onBeforeUnmount(() => {
-  if (timer === undefined) return
-  window.clearTimeout(timer)
-  timer = undefined
-})
 </script>
 
 <template>
-  <main
-    class="page"
-    role="status"
-    aria-live="polite"
-    tabindex="0"
-    @click="goToRegister"
-    @keydown.enter.prevent="goToRegister"
-    @keydown.space.prevent="goToRegister"
-  >
+  <main class="page" role="status" aria-live="polite" tabindex="0">
     <div class="glow" aria-hidden="true">
       <span class="glow__spot glow__spot--top" />
       <span class="glow__spot glow__spot--mid" />
@@ -51,19 +19,21 @@ onBeforeUnmount(() => {
 
     <div class="frame frame--red">
       <div class="frame frame--blue">
-        <img class="logo" src="../assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+        <section class="section-1">
+          <img src="../assets/images/mascot.png" alt="" draggable="false" />
+        </section>
 
-        <div class="stage">
-          <p class="bubble">
-            <strong>Хорошо!</strong>
-            <span>Подожди, когда сотрудник</span>
-            <span>тебя назовет.</span>
+        <section class="section-2">
+          <img class="logo" src="../assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+          <p class="bubble" :style="{ '--bubble-bg': `url(${bubbleBlue})` }">
+            <span>Хорошо!</span>
+            <span>Подожди, когда</span>
+            <span>сотрудник тебя назовет.</span>
           </p>
-        </div>
+          <button class="submit" type="submit" @click="goToRegister">Выход</button>
+        </section>
       </div>
     </div>
-
-    <img class="mascot" src="../assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
   </main>
 </template>
 
@@ -71,10 +41,7 @@ onBeforeUnmount(() => {
 $red: #ff2b42;
 $blue: #0077ff;
 $glow: #0040ff;
-$bubble-start: #2e54f1;
-$bubble-end: #c5d2f8;
-$bubble-bot: #8ea4f5;
-$bubble-side: #5e7af3;
+$bubble: #0040ff;
 
 .page {
   position: relative;
@@ -83,7 +50,7 @@ $bubble-side: #5e7af3;
   height: 100%;
   padding: clamp(12px, 2.4vh, 32px);
   overflow: hidden;
-  background: #0e1a50;
+  background: #000;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -146,140 +113,93 @@ $bubble-side: #5e7af3;
   }
 
   &--blue {
-    padding: clamp(56px, 9vh, 76px) clamp(18px, 2.6vw, 40px) clamp(16px, 2.4vh, 28px);
     overflow: visible;
     border: clamp(4px, 0.65vw, 7px) solid $blue;
     box-shadow: 0 0 18px rgba($blue, 0.28);
+    display: flex;
+    position: relative;
   }
 }
 
-.logo {
-  position: absolute;
-  top: 40px;
-  left: 50%;
-  z-index: 6;
-  width: min(42vw, 210px);
-  height: auto;
-  transform: translateX(-50%);
-  pointer-events: none;
-  user-select: none;
-}
-
-.stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  align-items: center;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-}
-
-.mascot {
-  position: absolute;
-  left: -23px;
-  bottom: 0;
-  z-index: 3;
-  width: auto;
-  max-width: 58%;
-  height: min(92%, 78vh);
-  object-fit: contain;
-  object-position: left bottom;
-  pointer-events: none;
-  user-select: none;
-}
-
-.bubble {
+.section-1 {
+  width: 48%;
   position: relative;
-  z-index: 4;
-  grid-column: 2;
-  justify-self: start;
-  width: max-content;
-  max-width: min(100%, 34rem);
-  margin: 0;
-  padding: clamp(22px, 3.4vh, 42px) clamp(22px, 3vw, 40px);
-  color: #fff;
-  font-size: clamp(1.25rem, 0.75rem + 2vw, 2.15rem);
-  font-weight: 700;
-  line-height: 1.25;
-  text-align: center;
-  border-radius: 32px;
-  background: linear-gradient(135deg, $bubble-start 0%, $bubble-end 100%);
-  pointer-events: none;
 
-  strong,
-  span {
-    display: block;
-  }
-
-  strong {
-    margin-bottom: 0.15em;
-    font-size: 1.08em;
-  }
-
-  span {
-    white-space: nowrap;
-  }
-
-  &::after {
-    content: '';
+  img {
     position: absolute;
-    top: 52%;
-    left: 0;
-    border: 16px solid transparent;
-    border-right-color: $bubble-side;
-    border-left-width: 0;
-    transform: translate(-90%, -50%);
+    left: -60px;
+    bottom: -70px;
+    z-index: 3;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: left bottom;
+    pointer-events: none;
+    user-select: none;
   }
 }
 
-@media (orientation: portrait) {
-  .page {
-    overflow: auto;
-  }
-
-  .frame--blue {
-    padding-top: clamp(64px, 10vh, 84px);
-  }
-
-  .stage {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-    justify-items: center;
+.section-2 {
+  display: flex;
+  flex-direction: column;
+  width: 52%;
+  height: 100%;
+  align-items: center;
+  padding: 45px 0 35px 0;
+  .logo {
+    width: 204px;
+    margin-bottom: 70px;
   }
 
   .bubble {
-    grid-column: 1;
-    margin-top: clamp(8px, 2vh, 20px);
+    position: relative;
+    z-index: 4;
+    box-sizing: border-box;
+    width: min(100%, 542px);
+    aspect-ratio: 583 / 274;
+    margin: 0;
+    padding: 12% 8% 20%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 36px;
+    font-weight: 500;
+    line-height: 1.1;
+    text-align: center;
+    pointer-events: none;
 
     &::after {
-      top: auto;
-      bottom: 0;
-      left: 28%;
-      border: 12px solid transparent;
-      border-top-color: $bubble-bot;
-      border-bottom-width: 0;
-      transform: translateY(90%);
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: var(--bubble-bg) no-repeat center / 96% 80%;
+      pointer-events: none;
+      left: -31px;
+      bottom: -19px;
+    }
+
+    span {
+      display: block;
+      white-space: nowrap;
     }
   }
 
-  .mascot {
-    max-width: 72%;
-    height: min(42vh, 360px);
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-  }
-}
-
-@media (max-height: 600px) {
-  .logo {
-    width: 140px;
-  }
-
-  .bubble {
-    font-size: clamp(1rem, 2.4vh, 1.35rem);
-    padding: 14px 20px;
+  .submit {
+    width: 89%;
+    height: 60px;
+    border-radius: 40px;
+    background: $red;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: auto;
+    border: 0;
   }
 }
 </style>
