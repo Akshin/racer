@@ -1,19 +1,16 @@
 <script setup lang="ts">
 /**
  * Турнирная таблица зала в киосковой рамке.
- * Скорость считаем из лучшего заезда за минуту: метры / время.
- * Слева — ролики витрины: четыре файла по кругу, старт при входе на страницу.
+ * Слева — ролики витрины и маскот; справа — таблица и кнопка старта.
  */
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import clip1 from '@/assets/video/1.mp4'
 import clip2 from '@/assets/video/2.mp4'
 import clip3 from '@/assets/video/3.mp4'
 import clip4 from '@/assets/video/4.mp4'
-import { RACE_DURATION_MS } from '@/game/config'
 import { getUsers, sortUsersByMeters, type VeloUser } from '@/net/usersApi'
 
 const POLL_MS = 2000
-const HOURS = RACE_DURATION_MS / 3_600_000
 const CLIPS = [clip1, clip2, clip3, clip4] as const
 
 const users = ref<VeloUser[]>([])
@@ -45,14 +42,9 @@ function formatRank(index: number): string {
   return String(index + 1).padStart(4, '0')
 }
 
-function formatSpeed(meters: number | null): string {
-  if (meters === null) return '—'
-  return `${Math.round(meters / 1000 / HOURS)} км/ч`
-}
-
 function formatDistance(meters: number | null): string {
   if (meters === null) return '—'
-  return `${(meters / 1000).toFixed(2)} км`
+  return `${Math.round(meters)} м`
 }
 
 async function tryPlay(): Promise<void> {
@@ -94,68 +86,71 @@ onBeforeUnmount(() => {
 
     <div class="frame frame--red">
       <div class="frame frame--blue">
-        <div class="stage">
-          <div class="hero">
-            <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
-            <div class="reel">
-              <video
-                ref="player"
-                :src="clipSrc"
-                muted
-                autoplay
-                playsinline
-                preload="auto"
-                @ended="onClipEnded"
-                @loadeddata="tryPlay"
-              />
-            </div>
+        <section class="section-1">
+          <img class="mascot" src="@/assets/images/mascot.png" alt="" draggable="false" />
+
+          <div class="reel">
+            <video
+              ref="player"
+              :src="clipSrc"
+              muted
+              autoplay
+              playsinline
+              preload="auto"
+              @ended="onClipEnded"
+              @loadeddata="tryPlay"
+            />
           </div>
 
-          <section class="board">
-            <p v-if="loadError" class="banner" role="alert">{{ loadError }}</p>
+          <p class="bubble">
+            <span>Смотри спорт</span>
+            <span>в VK Видео</span>
+          </p>
+        </section>
 
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th class="rank">Позиция</th>
-                    <th class="nick">Никнейм</th>
-                    <th class="num">Средняя скорость</th>
-                    <th class="num">Макс. Расстояние</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(user, index) in leaders" :key="user.id">
-                    <td class="rank">{{ formatRank(index) }}</td>
-                    <td class="nick">{{ user.nick }}</td>
-                    <td class="num">{{ formatSpeed(user.meters) }}</td>
-                    <td class="num">{{ formatDistance(user.meters) }}</td>
-                  </tr>
-                  <tr v-if="leaders.length === 0">
-                    <td colspan="4" class="empty">Пока никого нет</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        <section class="section-2">
+          <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+          <h1 class="title">Турнирная таблица</h1>
 
-            <div class="foot">
-              <div class="rail" aria-hidden="true">
-                <span class="rail__line" />
-                <img
-                  class="rail__bike"
-                  src="@/assets/images/white_biker.png"
-                  alt=""
-                  draggable="false"
-                />
-              </div>
-              <RouterLink class="start" to="/start">Начать игру</RouterLink>
-            </div>
-          </section>
-        </div>
+          <p v-if="loadError" class="banner" role="alert">{{ loadError }}</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="rank">Позиция</th>
+                  <th class="nick">Никнейм</th>
+                  <th class="num">Макс. Расстояние</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(user, index) in leaders" :key="user.id">
+                  <td class="rank">{{ formatRank(index) }}</td>
+                  <td class="nick">{{ user.nick }}</td>
+                  <td class="num">{{ formatDistance(user.meters) }}</td>
+                </tr>
+                <tr v-if="leaders.length === 0">
+                  <td colspan="3" class="empty">Пока никого нет</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="foot">
+            <!-- <div class="rail" aria-hidden="true">
+              <span class="rail__line" />
+              <img
+                class="rail__bike"
+                src="@/assets/images/white_biker.png"
+                alt=""
+                draggable="false"
+              />
+            </div> -->
+            <RouterLink class="start" to="/start">Начать игру</RouterLink>
+          </div>
+        </section>
       </div>
     </div>
-
-    <img class="mascot" src="@/assets/images/MASCOT_FULL.png" alt="" draggable="false" />
   </main>
 </template>
 
@@ -163,16 +158,15 @@ onBeforeUnmount(() => {
 $red: #ff2b42;
 $blue: #0077ff;
 $glow: #0040ff;
-$line: rgba(255, 255, 255, 0.35);
 
 .page {
   position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100dvh;
-  padding: clamp(10px, 2.2vh, 28px);
+  padding: clamp(12px, 2.4vh, 32px);
   overflow: hidden;
-  background: #0e1a50;
+  background: #000;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -224,47 +218,39 @@ $line: rgba(255, 255, 255, 0.35);
   min-width: 0;
   min-height: 0;
   overflow: visible;
-  border-radius: clamp(14px, 2.2vw, 25px);
+  border-radius: clamp(16px, 2.2vw, 25px);
 
   &--red {
-    padding: clamp(8px, 1.6vh, 22px);
-    border: clamp(4px, 0.8vw, 9px) solid $red;
+    padding: clamp(8px, 1.6vh, 36px);
+    border: clamp(8px, 0.45vw, 18px) solid $red;
     box-shadow: 0 0 24px rgba($red, 0.35);
   }
 
   &--blue {
     overflow: visible;
-    padding: clamp(10px, 2vh, 28px) clamp(14px, 2.2vw, 32px) clamp(10px, 1.6vh, 20px);
-    border: clamp(3px, 0.6vw, 7px) solid $blue;
+    border: clamp(6px, 0.35vw, 14px) solid $blue;
     box-shadow: 0 0 18px rgba($blue, 0.28);
+    display: flex;
+    position: relative;
   }
 }
 
-.stage {
-  display: grid;
-  grid-template-columns: minmax(0, 0.58fr) minmax(0, 1fr);
-  gap: clamp(12px, 2vw, 32px);
-  width: 100%;
+.section-1 {
+  width: 48%;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.mascot {
+  position: absolute;
+  left: -8%;
+  bottom: -10%;
+  z-index: 3;
+  width: 60%;
   height: 100%;
-  min-width: 0;
-  min-height: 0;
-}
-
-.hero {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(12px, 2vh, 22px);
-  min-width: 0;
-  min-height: 0;
-}
-
-.logo {
-  position: relative;
-  z-index: 2;
-  width: min(100%, clamp(140px, 16vw, 210px));
-  height: auto;
+  object-fit: contain;
+  object-position: left bottom;
   pointer-events: none;
   user-select: none;
 }
@@ -272,12 +258,14 @@ $line: rgba(255, 255, 255, 0.35);
 .reel {
   position: relative;
   z-index: 2;
-  width: 100%;
-  max-width: none;
+  box-sizing: border-box;
+  width: 90%;
   overflow: hidden;
-  aspect-ratio: 16 / 10;
-  background: #d9d9d9;
+  aspect-ratio: 16 / 9;
+  background: #111;
+  border: 12px solid #ff2b42;
   border-radius: 12px;
+  margin: 72px auto;
 
   video {
     display: block;
@@ -287,31 +275,79 @@ $line: rgba(255, 255, 255, 0.35);
   }
 }
 
-.mascot {
+.bubble {
   position: absolute;
-  left: -23px;
-  bottom: 0;
-  z-index: 3;
-  width: auto;
-  max-width: 34%;
-  height: min(58%, 50vh);
-  object-fit: contain;
-  object-position: left bottom;
-  pointer-events: none;
-  user-select: none;
-}
-
-.board {
+  left: 45%;
+  bottom: 9%;
+  z-index: 4;
+  box-sizing: border-box;
+  width: clamp(220px, 18vw, 520px);
+  margin: 0;
+  padding: clamp(26px, 2.2vw, 56px) clamp(28px, 2.4vw, 60px);
   display: flex;
   flex-direction: column;
-  gap: clamp(10px, 1.6vh, 18px);
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-size: clamp(22px, 1.35vw, 48px);
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  background: #000;
+  border-radius: clamp(18px, 1.2vw, 36px);
+  pointer-events: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: clamp(18px, 1.1vw, 36px);
+    height: clamp(22px, 1.4vw, 44px);
+    background: #000;
+    clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    transform: translate(-92%, -50%);
+  }
+
+  span {
+    display: block;
+    white-space: nowrap;
+  }
+}
+
+.section-2 {
+  display: flex;
+  flex-direction: column;
+  width: 52%;
+  height: 100%;
+  align-items: stretch;
+  padding: 40px 40px 28px 12px;
   min-width: 0;
   min-height: 0;
   z-index: 4;
 }
 
+.logo {
+  display: block;
+  width: 33%;
+  margin: 3% auto 3%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.title {
+  margin: 0 0 18px;
+  color: #fff;
+  font-size: clamp(1rem, 4vw, 9rem);
+  font-weight: 500;
+  line-height: 1.1;
+  text-align: center;
+  margin-bottom: 4%;
+}
+
 .banner {
-  margin: 0;
+  width: 100%;
+  margin: 0 0 12px;
   padding: 0.5rem 0.8rem;
   color: #ffd0d5;
   background: rgba($red, 0.18);
@@ -319,6 +355,7 @@ $line: rgba(255, 255, 255, 0.35);
 }
 
 .table-wrap {
+  width: 100%;
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
@@ -332,52 +369,52 @@ $line: rgba(255, 255, 255, 0.35);
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 20px;
+  color: #fff;
+  font-size: clamp(28px, 1.4vw, 54px);
+  line-height: 1.15;
 }
 
 th,
 td {
   box-sizing: border-box;
-  height: 38px;
-  padding: 0 0.9rem;
-  text-align: center;
+  height: clamp(56px, 3.6vh, 96px);
+  padding: 0 0.75em;
   vertical-align: middle;
   white-space: nowrap;
   border: 0;
-  border-bottom: 1px solid #fff;
-}
-
-th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  color: #fff;
-  font-weight: 600;
-  background: none;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  border-bottom: clamp(2px, 0.1vw, 4px) solid rgba(255, 255, 255, 0.75);
 }
 
 th + th,
 td + td {
-  border-left: 1px solid $line;
+  border-left: clamp(2px, 0.1vw, 4px) solid rgba(255, 255, 255, 0.75);
+}
+
+th {
+  font-weight: 700;
+  border-bottom-width: clamp(2px, 0.12vw, 5px);
 }
 
 tbody tr:nth-child(even) td {
-  background: #0277ff33;
+  background: rgba(2, 119, 255, 0.22);
 }
 
 .rank {
-  width: 7.5rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.num {
+  width: 22%;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
 .nick {
   text-align: left;
   font-weight: 600;
+}
+
+.num {
+  width: 30%;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .empty {
@@ -388,14 +425,17 @@ tbody tr:nth-child(even) td {
 .foot {
   display: flex;
   align-items: center;
-  gap: clamp(12px, 2vw, 24px);
+  gap: clamp(20px, 1.4vw, 48px);
+  width: 100%;
+  margin-top: auto;
+  padding-top: clamp(18px, 2vh, 78px);
 }
 
 .rail {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
-  height: 36px;
+  height: clamp(40px, 4.5vh, 96px);
 }
 
 .rail__line {
@@ -403,7 +443,7 @@ tbody tr:nth-child(even) td {
   top: 50%;
   right: 0;
   left: 0;
-  height: 2px;
+  height: clamp(2px, 0.15vw, 6px);
   background: linear-gradient(90deg, #fff 0%, #fff 62%, rgb(255 255 255 / 28%) 62%);
   transform: translateY(-50%);
 }
@@ -413,10 +453,10 @@ tbody tr:nth-child(even) td {
   top: 50%;
   left: 62%;
   width: auto;
-  height: 28px;
+  height: clamp(32px, 3.2vh, 72px);
   mix-blend-mode: screen;
-  filter: drop-shadow(-14px 0 8px rgb(255 255 255 / 55%));
-  transform: translate(-100px, -30px);
+  filter: drop-shadow(clamp(-14px, -0.4vw, -28px) 0 clamp(8px, 0.3vw, 16px) rgb(255 255 255 / 55%));
+  transform: translate(-55%, -70%);
   pointer-events: none;
 }
 
@@ -424,39 +464,20 @@ tbody tr:nth-child(even) td {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: clamp(10.5rem, 18vw, 14rem);
-  height: clamp(44px, 6vh, 54px);
-  padding: 0 1.4rem;
+  flex: 0 0 auto;
+  min-width: clamp(210px, 24vw, 703px);
+  height: clamp(60px, 5.5vh, 120px);
+  padding: 0 clamp(1.4rem, 1.2vw, 2.5rem);
   color: #fff;
-  font-size: clamp(1rem, 1.4vw, 1.2rem);
-  font-weight: 700;
+  font-size: clamp(20px, 1.2vw, 44px);
+  font-weight: 500;
   text-decoration: none;
-  background: $red;
+  background: #ff2b42;
   border-radius: 999px;
-  box-shadow: 0 0 18px rgba($red, 0.45);
+  margin: 0 auto;
 
   &:active {
     filter: brightness(0.92);
-  }
-}
-
-@media (orientation: portrait) {
-  .stage {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .reel {
-    max-width: 100%;
-    max-height: 22vh;
-  }
-
-  .mascot {
-    max-width: 72%;
-    height: min(42vh, 360px);
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
   }
 }
 </style>
