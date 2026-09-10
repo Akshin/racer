@@ -8,7 +8,6 @@ import { defineStore } from 'pinia'
 import { racerSheetAlias } from '@/game/racerAlias'
 import { PLAYER_IDS, PROTOCOL_VERSION } from '@/net/protocol'
 import { TelemetryClient } from '@/net/telemetryClient'
-import { useSettingsStore } from '@/stores/settings'
 
 /** Телеметрия не приходит дольше этого времени — связь есть, а данных нет. */
 const STALE_MS = 1500
@@ -70,7 +69,6 @@ function defaultUrl(): string {
 }
 
 export const useSessionStore = defineStore('session', () => {
-  const settings = useSettingsStore()
   const url = ref(window.localStorage.getItem(URL_STORAGE_KEY) ?? defaultUrl())
   const status = ref<ConnectionStatus>('offline')
   const checks = ref(emptyChecks())
@@ -183,21 +181,13 @@ export const useSessionStore = defineStore('session', () => {
     if (status.value !== 'online') list.push('Нет соединения с адаптером')
     else if (!dataFlowing.value) list.push('Соединение есть, но телеметрия не приходит')
 
-    if (settings.allowOneTrainer) {
-      const anyReady = PLAYER_IDS.some((id) => {
-        const check = checks.value[id]
-        return check !== undefined && check.telemetry.connected && check.spinning
-      })
-      if (!anyReady) list.push('Покрутите педали хотя бы на одном тренажёре')
-    } else {
-      activePlayerIds.value.forEach((id, index) => {
-        const check = checks.value[id]
-        const label = `Тренажёр ${index + 1}`
-        if (check === undefined || !check.telemetry.connected)
-          list.push(`${label}: датчик не привязан`)
-        else if (!check.spinning) list.push(`${label}: покрутите педали для проверки датчика`)
-      })
-    }
+    activePlayerIds.value.forEach((id, index) => {
+      const check = checks.value[id]
+      const label = `Тренажёр ${index + 1}`
+      if (check === undefined || !check.telemetry.connected)
+        list.push(`${label}: датчик не привязан`)
+      else if (!check.spinning) list.push(`${label}: покрутите педали для проверки датчика`)
+    })
     return list
   })
 
@@ -220,19 +210,9 @@ export const useSessionStore = defineStore('session', () => {
     window.sessionStorage.removeItem(VERIFIED_STORAGE_KEY)
   }
 
-  // Сняли «достаточно одного» — прежняя проверка одним датчиком больше не считается пройденной.
-  watch(
-    () => settings.allowOneTrainer,
-    (allow) => {
-      if (allow) return
-      if (trainersReady(activePlayerIds.value)) return
-      dropVerified()
-    },
-  )
-
   // С 1 на 2 игроков: проверка только синего слота больше не открывает сплит.
   watch(playerCount, (count, previous) => {
-    if (count !== 2 || previous !== 1 || settings.allowOneTrainer) return
+    if (count !== 2 || previous !== 1) return
     if (trainersReady(PLAYER_IDS)) return
     dropVerified()
   })

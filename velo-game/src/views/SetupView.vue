@@ -41,8 +41,7 @@ function time(at: number): string {
       <h1>Проверка перед заездом</h1>
       <p class="muted">
         Подключитесь к адаптеру и покрутите педали. Для заезда в одиночку достаточно первого
-        тренажёра — на экране старта выберите «Один игрок». Для двоих нужны оба датчика, либо
-        включите «достаточно одного тренажёра».
+        тренажёра — на экране старта выберите «Один игрок». Для двоих нужны оба датчика.
       </p>
       <p>
         <RouterLink to="/leaderboard">Лидерборд</RouterLink>
@@ -101,10 +100,6 @@ function time(at: number): string {
 
     <section class="card">
       <strong>Заезд</strong>
-      <label class="option">
-        <input v-model="settings.allowOneTrainer" type="checkbox" />
-        достаточно одного тренажёра
-      </label>
       <p class="muted">
         Множитель дороги не меняет км/ч в панели — только как быстро набегает разметка.
       </p>
@@ -246,12 +241,6 @@ header {
   &.ok {
     color: t.$ok;
   }
-}
-
-.option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .scale {

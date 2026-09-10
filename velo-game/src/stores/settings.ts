@@ -14,13 +14,8 @@ import {
   SPEED_SCALE_STEP,
 } from '@/game/config'
 
-const ALLOW_ONE_KEY = 'velo:allow-one'
 const SPEED_SCALE_KEY = 'velo:speed-scale'
 const RACE_DISTANCE_KEY = 'velo:race-distance'
-
-function readFlag(key: string): boolean {
-  return window.localStorage.getItem(key) === '1'
-}
 
 function readNumber(key: string, fallback: number): number {
   const raw = window.localStorage.getItem(key)
@@ -40,13 +35,9 @@ function snapDistance(value: number): number {
 }
 
 export const useSettingsStore = defineStore('settings', () => {
-  const allowOneTrainer = ref(readFlag(ALLOW_ONE_KEY))
   const speedScale = ref(snapScale(readNumber(SPEED_SCALE_KEY, SPEED_SCALE)))
   const raceDistanceM = ref(snapDistance(readNumber(RACE_DISTANCE_KEY, RACE_DISTANCE_M)))
 
-  watch(allowOneTrainer, (value) => {
-    window.localStorage.setItem(ALLOW_ONE_KEY, value ? '1' : '0')
-  })
   watch(speedScale, (value) => {
     const snapped = snapScale(value)
     if (snapped !== value) {
@@ -59,5 +50,5 @@ export const useSettingsStore = defineStore('settings', () => {
     window.localStorage.setItem(RACE_DISTANCE_KEY, String(value))
   })
 
-  return { allowOneTrainer, speedScale, raceDistanceM }
+  return { speedScale, raceDistanceM }
 })

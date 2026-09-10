@@ -279,7 +279,7 @@ onBeforeUnmount(() => {
   bottom: 0;
   left: 50%;
   z-index: 1;
-  width: 2px;
+  width: clamp(2px, 0.12vw, 6px);
   background: #fff;
   box-shadow:
     0 0 4px 1px rgb(122 240 255 / 90%),
@@ -289,20 +289,20 @@ onBeforeUnmount(() => {
 
 .stage__timer {
   position: absolute;
-  top: 0.55rem;
+  top: clamp(0.55rem, 1.4vh, 2rem);
   left: 50%;
   z-index: 5;
   min-width: 2.35em;
-  padding: 0.32em 0.38em 0.4em;
+  padding: 0.28em 0.42em 0.46em;
   color: #fff;
   font-family: t.$font-digital;
-  font-size: clamp(2.8rem, 7.4vh, 4.8rem);
+  font-size: clamp(2.8rem, 8vh, 10rem);
   font-weight: 400;
   line-height: 1;
   letter-spacing: 0.04em;
   text-align: center;
   background: rgb(8 10 14 / 78%);
-  border-radius: 22px;
+  border-radius: clamp(16px, 1.1vw, 36px);
   box-shadow: 0 4px 18px rgb(0 0 0 / 40%);
   transform: translateX(-50%);
 
@@ -310,9 +310,9 @@ onBeforeUnmount(() => {
     content: '';
     position: absolute;
     right: 22%;
-    bottom: 0.28em;
+    bottom: 0.22em;
     left: 22%;
-    height: 3px;
+    height: clamp(3px, 0.18vw, 8px);
     border-radius: 2px;
     pointer-events: none;
     background: linear-gradient(90deg, t.$player-1 0 50%, t.$player-2 50% 100%);

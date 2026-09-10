@@ -34,7 +34,6 @@ import {
   BANNER_PHASE_RIGHT,
   BANNER_SLOTS_PER_SIDE,
   BANNER_TUBE_M,
-  BANNER_UNTIL_M,
   BANNER_WIDTH_M,
   BERM_HEIGHT_M,
   BERM_WIDTH_M,
@@ -613,7 +612,7 @@ export class Lane {
     }
   }
 
-  /** Баннеры вдоль кромки — только первые BANNER_UNTIL_M метров заезда. */
+  /** Баннеры вдоль кромки — сплошной забор на всю дистанцию заезда. */
   #drawBanners(): void {
     const textures = this.#bannerTextures
     if (textures.length === 0) {
@@ -623,7 +622,6 @@ export class Lane {
 
     const projection = this.#projection
     const traveled = this.#traveled * this.#visualScale
-    const untilZ = BANNER_UNTIL_M * this.#visualScale
     const xM = ROAD_WIDTH_M / 2 + BANNER_OFFSET_M
     const rise = BERM_HEIGHT_M * Math.min(1, Math.max(0, BANNER_OFFSET_M / BERM_WIDTH_M))
     const panelBot = rise + BANNER_LEG_M
@@ -641,7 +639,7 @@ export class Lane {
       for (let slot = 0; slot < BANNER_SLOTS_PER_SIDE; slot++) {
         const bannerIndex = baseIndex + slot
         const worldZ = bannerIndex * BANNER_PERIOD_M + phase
-        if (worldZ < 0 || worldZ >= untilZ) continue
+        if (worldZ < 0) continue
         const z0 = worldZ - traveled
         const z1 = z0 + BANNER_WIDTH_M
         // Не клипать к projection.nearZ: это низ кадра, а не плоскость стены.
@@ -655,7 +653,7 @@ export class Lane {
         if (banner === undefined) return
         used += 1
 
-        const texture = textures[bannerKind(bannerIndex, side, textures.length)]
+        const texture = textures[0]
         if (texture !== undefined) banner.poster.texture = texture
         const fade = Math.min(1, Math.max(0, (BANNER_DISTANCE_M - nearZ) / BANNER_FADE_M))
         banner.group.visible = true
@@ -756,10 +754,6 @@ function hash01(seed: number): number {
 
 function treeKind(index: number, side: number, count: number): number {
   return Math.floor(hash01(index * 13.7 + side * 17.2) * count) % count
-}
-
-function bannerKind(index: number, side: number, count: number): number {
-  return Math.floor(hash01(index * 23.1 + side * 9.7) * count) % count
 }
 
 type BannerProp = {

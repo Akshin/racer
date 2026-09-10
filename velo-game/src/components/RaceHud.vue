@@ -381,4 +381,59 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
   margin: 0 0.28em;
   color: rgb(255 255 255 / 55%);
 }
+
+@media (min-width: 2560px) and (min-height: 1600px) {
+  .hud {
+    padding: 1.2rem 2rem;
+  }
+
+  .hud--solo {
+    .gauge {
+      flex: 0 0 28vw;
+      width: 28vw;
+    }
+
+    .stats {
+      flex: 0 0 34vw;
+      width: 34vw;
+      max-width: none;
+    }
+  }
+
+  .hud__bottom {
+    right: 2rem;
+    bottom: 1.4rem;
+    left: 2rem;
+    gap: 1.4rem;
+    padding-top: 12rem;
+  }
+
+  .gauge {
+    flex-basis: 38%;
+    width: 38%;
+    padding: 0.4rem 1.1rem 0.25rem;
+    border-radius: 36px;
+  }
+
+  .stats {
+    min-height: 0;
+    padding: 2.4rem 2.6rem 1.4rem 2rem;
+    border-radius: 36px;
+  }
+
+  .hud--player-2 .stats {
+    padding: 2.4rem 2rem 1.4rem 2.6rem;
+  }
+
+  .stats__nick {
+    padding-bottom: 0.45em;
+    margin-bottom: 0.5em;
+    border-bottom-width: 4px;
+    font-size: 1.35vw;
+  }
+
+  .stats__row {
+    font-size: 1.05vw;
+  }
+}
 </style>

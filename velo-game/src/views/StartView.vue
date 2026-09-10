@@ -214,7 +214,7 @@ onBeforeUnmount(() => {
         Давайте <br />
         начнем гонку!
       </p>
-      <img class="mascot" src="@/assets/images/MASCOT_FULL.png" alt="" draggable="false" />
+      <img class="mascot" src="@/assets/images/mascot.png" alt="" draggable="false" />
     </div>
   </main>
 </template>

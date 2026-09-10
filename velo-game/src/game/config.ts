@@ -85,8 +85,8 @@ export const FLAG_ROW_GAP_M = 5
 export const FLAG_CLUSTER_SLOTS = Math.ceil(FLAG_DISTANCE_M / FLAG_PERIOD_M) + 2
 
 /**
- * Баннеры — сплошной забор вдоль кромки, плоскость параллельна дороге.
- * Длинная сторона постера идёт вдаль, не лицом в камеру.
+ * Баннеры — сплошной забор вдоль кромки на всю дистанцию.
+ * Плоскость параллельна дороге: длинная сторона постера идёт вдаль, не лицом в камеру.
  */
 export const BANNER_WIDTH_M = 4.2
 export const BANNER_HEIGHT_M = 1.05
@@ -106,8 +106,6 @@ export const BANNER_FADE_M = 14
  */
 export const BANNER_CAM_Z_M = 0.45
 export const BANNER_SLOTS_PER_SIDE = Math.ceil(BANNER_DISTANCE_M / BANNER_PERIOD_M) + 2
-/** Баннеры только на первых метрах заезда (метры адаптера, как в HUD). */
-export const BANNER_UNTIL_M = 170
 
 /**
  * Велосипедист — неподвижный относительно камеры спрайт по центру дороги.

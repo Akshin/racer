@@ -42,7 +42,7 @@ const confetti = Array.from({ length: 42 }, (_, i) => ({
 
     <div class="frame frame--red">
       <div class="frame frame--blue">
-        <img class="mascot" src="@/assets/images/mascod_flag.png" alt="" draggable="false" />
+        <img class="mascot" src="@/assets/images/mascot-flag.png" alt="" draggable="false" />
 
         <div class="panel">
           <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
