@@ -3,7 +3,7 @@
  * Экран гонки: канвас PixiJS с дорогами и HTML-оверлей с показателями.
  * Отрисовка сцены живёт в src/game, показатели — в компоненте RaceHud.
  */
-import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import FinishPopup from '@/components/FinishPopup.vue'
 import RaceHud from '@/components/RaceHud.vue'
@@ -42,6 +42,8 @@ const elapsedMs = ref(0)
 const racing = ref(false)
 const coasting = ref(false)
 const countdownText = ref<string | null>(null)
+/** Ждём живой каденс: C3 спит, `spinning` с проверки не считается — он липкий. */
+const waitingForPedals = ref(false)
 const showFinish = ref(false)
 const finishStep = ref<1 | 2>(1)
 const finishes = ref<LaneFinish[]>([])
@@ -49,6 +51,21 @@ const frozenTelemetry = ref<PlayerTelemetry[] | null>(null)
 
 const solo = computed(() => session.playerCount === 1)
 const remainingMs = computed(() => Math.max(0, RACE_DURATION_MS - elapsedMs.value))
+
+const sensorsAwake = computed(
+  () =>
+    session.activePlayerChecks.length > 0 &&
+    session.activePlayerChecks.every((check) => check.telemetry.cadence > 0),
+)
+
+const waitingHint = computed(() => {
+  if (solo.value) return null
+  const waiting = session.activePlayerChecks.flatMap((check, index) =>
+    check.telemetry.cadence > 0 ? [] : [index === 0 ? 'левый' : 'правый'],
+  )
+  if (waiting.length !== 1) return null
+  return `ждём ${waiting[0]}`
+})
 
 const timerLabel = computed(() => String(Math.floor(remainingMs.value / 1000)).padStart(2, '0'))
 
@@ -161,6 +178,12 @@ function playCountdown(step = 0): void {
   countdownBeat = window.setTimeout(() => playCountdown(step + 1), COUNTDOWN_BEAT_MS)
 }
 
+function beginCountdownWhenAwake(): void {
+  if (closed || !waitingForPedals.value || !sensorsAwake.value) return
+  waitingForPedals.value = false
+  playCountdown()
+}
+
 onMounted(async () => {
   const preview = import.meta.env.DEV ? String(router.currentRoute.value.query.popup ?? '') : ''
   if (preview === 'finish' || preview === 'solo' || preview === 'over') {
@@ -181,7 +204,8 @@ onMounted(async () => {
     finishStep.value = preview === 'over' ? 2 : 1
   } else {
     session.resetRace()
-    playCountdown()
+    waitingForPedals.value = true
+    beginCountdownWhenAwake()
   }
 
   if (host.value === null) return
@@ -204,6 +228,8 @@ onMounted(async () => {
   if (racing.value) game.beginRace()
 })
 
+watch(sensorsAwake, () => beginCountdownWhenAwake())
+
 onBeforeUnmount(() => {
   closed = true
   window.clearInterval(clock)
@@ -225,6 +251,10 @@ onBeforeUnmount(() => {
       <div v-if="racing && !showFinish" class="stage__timer">{{ timerLabel }}</div>
       <div v-if="!showFinish" class="stage__lanes">
         <RaceHud v-for="lane in lanes" :key="lane.telemetry.id" v-bind="lane" />
+      </div>
+      <div v-if="waitingForPedals" class="stage__wait">
+        <p class="stage__wait-title">Крутите педали</p>
+        <p v-if="waitingHint" class="stage__wait-hint">{{ waitingHint }}</p>
       </div>
       <div v-if="countdownText !== null" class="stage__countdown">
         <div
@@ -336,6 +366,45 @@ onBeforeUnmount(() => {
   inset: 0;
   z-index: 6;
   animation: finish-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.stage__wait {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: clamp(0.6rem, 2.2vmin, 4rem);
+  padding: clamp(1.2rem, 4vmin, 6rem);
+  background: rgb(0 0 0 / 38%);
+}
+
+.stage__wait-title {
+  margin: 0;
+  max-width: 90vw;
+  color: #fff;
+  font-family: t.$font-stack;
+  // vmin, не rem: на 4K 98" заголовок остаётся крупным.
+  font-size: clamp(2.4rem, 7.5vmin, 12rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow:
+    0 0.06em 0 rgb(0 0 0 / 40%),
+    0 0.22em 0.7em rgb(0 0 0 / 55%);
+}
+
+.stage__wait-hint {
+  margin: 0;
+  color: rgb(255 255 255 / 78%);
+  font-size: clamp(1.1rem, 3vmin, 5rem);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .stage__countdown {
