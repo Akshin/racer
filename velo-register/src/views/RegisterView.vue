@@ -213,7 +213,6 @@ async function onSubmit(): Promise<void> {
         </section>
       </div>
     </div>
-    <img class="mascot" src="../assets/images/MASCOT_WHITE.png" alt="" draggable="false" />
   </main>
 </template>
 
