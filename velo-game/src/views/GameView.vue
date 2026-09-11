@@ -7,7 +7,6 @@ import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from
 import { useRouter } from 'vue-router'
 import FinishPopup from '@/components/FinishPopup.vue'
 import RaceHud from '@/components/RaceHud.vue'
-import RaceOverPopup from '@/components/RaceOverPopup.vue'
 import { createGame } from '@/game'
 import { RACE_DURATION_MS } from '@/game/config'
 import { getUsers, placeForMeters, setUserMeters } from '@/net/usersApi'
@@ -18,9 +17,7 @@ import { useSettingsStore } from '@/stores/settings'
 const CLOCK_STEP_MS = 250
 /** Надпись выходит, когда дорога уже заметно выкатилась. */
 const FINISH_REVEAL_MS = 1200
-/** Первый попап: результаты (соло или двое). */
-const FINISH_WIN_MS = 3500
-/** Второй попап: «Гонка закончена!» — всегда последний перед лидербордом. */
+/** «Гонка закончена!» уже на экране — держим, потом лидерборд. */
 const FINISH_HOLD_MS = 4500
 /** Один такт отсчёта: появление и уход цифры / «поехали». */
 const COUNTDOWN_BEAT_MS = 950
@@ -45,7 +42,6 @@ const countdownText = ref<string | null>(null)
 /** Ждём живой каденс: C3 спит, `spinning` с проверки не считается — он липкий. */
 const waitingForPedals = ref(false)
 const showFinish = ref(false)
-const finishStep = ref<1 | 2>(1)
 const finishes = ref<LaneFinish[]>([])
 const frozenTelemetry = ref<PlayerTelemetry[] | null>(null)
 
@@ -83,19 +79,11 @@ const lanes = computed<LaneHud[]>(() =>
   }),
 )
 
-const racerNames = computed(() => {
-  const names = session.racers.flatMap((racer, index) =>
-    racer == null ? [] : [racer.nick || `Игрок ${index + 1}`],
-  )
-  return names.length > 0 ? names : ['Игрок 1']
-})
-
 let game: Game | null = null
 /** Инициализация асинхронная — компонент могли закрыть, не дождавшись её. */
 let closed = false
 let clock: number | undefined
 let reveal: number | undefined
-let toSecond: number | undefined
 let leave: number | undefined
 let countdownBeat: number | undefined
 let finished = false
@@ -126,24 +114,21 @@ async function finish(): Promise<void> {
       place: placeForMeters(snapshot.meters, board, session.racers[index]?.id),
     }))
   } catch {
-    // Надпись всё равно покажем — без места, с километрами.
+    // Надпись всё равно покажем — без места, с метрами.
   }
 
   if (closed) return
   reveal = window.setTimeout(() => {
     if (closed) return
-    // Шаг 1 — результаты: 1 игрок = соло-карточка, 2 игрока = I/II место.
-    // Шаг 2 — всегда «Гонка закончена!».
     showFinish.value = true
-    finishStep.value = 1
-    toSecond = window.setTimeout(() => {
-      if (closed) return
-      finishStep.value = 2
-      leave = window.setTimeout(() => {
-        if (!closed) void router.push({ name: 'leaderboard' })
-      }, FINISH_HOLD_MS)
-    }, FINISH_WIN_MS)
   }, FINISH_REVEAL_MS)
+}
+
+function onFinishOver(): void {
+  if (closed) return
+  leave = window.setTimeout(() => {
+    if (!closed) void router.push({ name: 'leaderboard' })
+  }, FINISH_HOLD_MS)
 }
 
 function startClock(): void {
@@ -201,7 +186,6 @@ onMounted(async () => {
         ]
       : [{ index: 0, nick: 'Тугарин Змей', meters: 15_000, place: 1245 }]
     showFinish.value = true
-    finishStep.value = preview === 'over' ? 2 : 1
   } else {
     session.resetRace()
     waitingForPedals.value = true
@@ -234,7 +218,6 @@ onBeforeUnmount(() => {
   closed = true
   window.clearInterval(clock)
   window.clearTimeout(reveal)
-  window.clearTimeout(toSecond)
   window.clearTimeout(leave)
   window.clearTimeout(countdownBeat)
   game?.destroy()
@@ -273,9 +256,8 @@ onBeforeUnmount(() => {
           </p>
         </div>
       </div>
-      <div v-if="showFinish" class="stage__finish" :key="finishStep">
-        <FinishPopup v-if="finishStep === 1" :players="finishes" />
-        <RaceOverPopup v-else :names="racerNames" />
+      <div v-if="showFinish" class="stage__finish">
+        <FinishPopup :players="finishes" @over="onFinishOver" />
       </div>
     </div>
   </div>
