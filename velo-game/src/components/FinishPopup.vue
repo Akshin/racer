@@ -3,6 +3,7 @@
  * Финишный оверлей: сначала результаты (соло или двое),
  * через 5 секунд всегда экран «Отличный результат!».
  */
+import confetti from 'canvas-confetti'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 export type FinishPlayer = {
@@ -22,6 +23,7 @@ type FinishRow = FinishPlayer & {
 
 /** Результаты на экране, потом всегда финальный попап. */
 const SHOW_OVER_MS = 5000
+const SALUTE_COLORS = ['#ff2b42', '#0077ff', '#ffe9a3', '#ffffff', '#5ec8ff', '#ff4d8d']
 
 const props = defineProps<{
   players: FinishPlayer[]
@@ -36,6 +38,7 @@ const duo = computed(() => props.players.length > 1)
 const title = 'Финиш!'
 
 let toOver: number | undefined
+const saluteTimers: number[] = []
 
 function formatMeters(meters: number): string {
   return `${Math.round(meters).toLocaleString('ru-RU')} м`
@@ -63,7 +66,7 @@ const rows = computed<FinishRow[]>(() => {
 
 const solo = computed(() => rows.value[0] ?? null)
 
-const confetti = Array.from({ length: 42 }, (_, i) => ({
+const confettiDots = Array.from({ length: 42 }, (_, i) => ({
   id: i,
   left: `${(i * 19 + 7) % 100}%`,
   top: `${(i * 27 + 3) % 92}%`,
@@ -73,7 +76,161 @@ const confetti = Array.from({ length: 42 }, (_, i) => ({
   delay: `${(i % 8) * 0.14}s`,
 }))
 
+function fireSaluteBurst() {
+  const defaults = {
+    colors: SALUTE_COLORS,
+    disableForReducedMotion: true,
+    zIndex: 9999,
+  }
+
+  // Центр — несколько слоёв для «пышности»
+  confetti({
+    ...defaults,
+    particleCount: 220,
+    spread: 160,
+    startVelocity: 62,
+    scalar: 1.25,
+    ticks: 280,
+    origin: { x: 0.5, y: 0.4 },
+  })
+  confetti({
+    ...defaults,
+    particleCount: 160,
+    spread: 100,
+    startVelocity: 48,
+    scalar: 0.9,
+    ticks: 260,
+    shapes: ['circle'],
+    origin: { x: 0.5, y: 0.45 },
+  })
+
+  // Нижние углы — мощные пушки
+  confetti({
+    ...defaults,
+    particleCount: 160,
+    angle: 55,
+    spread: 90,
+    startVelocity: 85,
+    scalar: 1.2,
+    ticks: 280,
+    origin: { x: 0, y: 1 },
+  })
+  confetti({
+    ...defaults,
+    particleCount: 160,
+    angle: 125,
+    spread: 90,
+    startVelocity: 85,
+    scalar: 1.2,
+    ticks: 280,
+    origin: { x: 1, y: 1 },
+  })
+
+  // Дополнительно из середины низа
+  confetti({
+    ...defaults,
+    particleCount: 120,
+    angle: 90,
+    spread: 100,
+    startVelocity: 75,
+    scalar: 1.15,
+    ticks: 260,
+    origin: { x: 0.5, y: 1 },
+  })
+}
+
+/** Один праздничный залп: центр + нижние углы, с короткими добивающими вспышками. */
+function fireSalute() {
+  fireSaluteBurst()
+  saluteTimers.push(
+    window.setTimeout(() => {
+      confetti({
+        particleCount: 140,
+        spread: 360,
+        startVelocity: 48,
+        ticks: 200,
+        scalar: 1.2,
+        colors: SALUTE_COLORS,
+        origin: { x: 0.2, y: 0.3 },
+        disableForReducedMotion: true,
+        zIndex: 9999,
+      })
+      confetti({
+        particleCount: 140,
+        spread: 360,
+        startVelocity: 48,
+        ticks: 200,
+        scalar: 1.2,
+        colors: SALUTE_COLORS,
+        origin: { x: 0.8, y: 0.3 },
+        disableForReducedMotion: true,
+        zIndex: 9999,
+      })
+    }, 280),
+    window.setTimeout(() => {
+      confetti({
+        particleCount: 180,
+        spread: 140,
+        startVelocity: 58,
+        ticks: 240,
+        scalar: 1.25,
+        colors: SALUTE_COLORS,
+        origin: { x: 0.5, y: 0.5 },
+        disableForReducedMotion: true,
+        zIndex: 9999,
+      })
+      confetti({
+        particleCount: 100,
+        angle: 60,
+        spread: 80,
+        startVelocity: 80,
+        ticks: 240,
+        colors: SALUTE_COLORS,
+        origin: { x: 0.1, y: 0.95 },
+        disableForReducedMotion: true,
+        zIndex: 9999,
+      })
+      confetti({
+        particleCount: 100,
+        angle: 120,
+        spread: 80,
+        startVelocity: 80,
+        ticks: 240,
+        colors: SALUTE_COLORS,
+        origin: { x: 0.9, y: 0.95 },
+        disableForReducedMotion: true,
+        zIndex: 9999,
+      })
+    }, 620),
+    window.setTimeout(() => {
+      confetti({
+        particleCount: 120,
+        spread: 360,
+        startVelocity: 42,
+        ticks: 220,
+        scalar: 1.1,
+        colors: SALUTE_COLORS,
+        origin: { x: 0.35, y: 0.38 },
+        disableForReducedMotion: true,
+        zIndex: 9999,
+      })
+      confetti({
+        particleCount: 120,
+        spread: 360,
+        startVelocity: 42,
+        ticks: 220,
+        scalar: 1.1,
+        colors: SALUTE_COLORS,
+        origin: { x: 0.65, y: 0.38 },
+        disableForReducedMotion: true,
+        zIndex: 9999,
+      })
+    }, 980),
+  )
+}
+
 onMounted(() => {
+  fireSalute()
   toOver = window.setTimeout(() => {
     over.value = true
     emit('over')
@@ -82,13 +239,15 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.clearTimeout(toOver)
+  for (const id of saluteTimers) window.clearTimeout(id)
+  saluteTimers.length = 0
 })
 </script>
 
 <template>
   <div class="popup">
     <span
-      v-for="piece in confetti"
+      v-for="piece in confettiDots"
       v-show="over || duo"
       :key="piece.id"
       class="confetti"
