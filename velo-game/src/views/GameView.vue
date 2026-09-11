@@ -110,10 +110,16 @@ async function finish(): Promise<void> {
 
   try {
     const board = await getUsers()
-    finishes.value = snapshots.map((snapshot, index) => ({
-      ...snapshot,
-      place: placeForMeters(snapshot.meters, board, session.racers[index]?.id),
-    }))
+    finishes.value = snapshots.map((snapshot, index) => {
+      const racerId = session.racers[index]?.id
+      // Место в таблице — по лучшему результату (после set_user_meters), не по метрам этого заезда.
+      const standing = racerId == null ? undefined : board.find((user) => user.id === racerId)
+      const meters = standing?.meters ?? snapshot.meters
+      return {
+        ...snapshot,
+        place: placeForMeters(meters, board, racerId),
+      }
+    })
   } catch {
     // Надпись всё равно покажем — без места, с метрами.
   }

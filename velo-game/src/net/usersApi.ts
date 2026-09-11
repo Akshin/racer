@@ -54,6 +54,7 @@ export function sortUsersByCreatedAt(users: readonly VeloUser[]): VeloUser[] {
 
 /**
  * Место в таблице: сколько людей проехали строго больше + 1.
+ * `meters` — актуальный лучший результат игрока (не метры одного заезда).
  * selfId не сравниваем с самим собой — иначе после записи рекорда место прыгнет.
  */
 export function placeForMeters(
