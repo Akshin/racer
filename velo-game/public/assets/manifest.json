@@ -152,6 +152,22 @@
               "tps": true
             }
           }
+        },
+        {
+          "alias": [
+            "race/mascots",
+            "mascots"
+          ],
+          "src": [
+            "race/mascots-0.webp.json",
+            "race/mascots-0.png.json"
+          ],
+          "data": {
+            "tags": {
+              "m": true,
+              "tps": true
+            }
+          }
         }
       ]
     }
