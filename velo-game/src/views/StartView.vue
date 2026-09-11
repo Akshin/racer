@@ -25,7 +25,6 @@ const p1 = ref(session.racers[0]?.id ?? '')
 const p2 = ref(session.racers[1]?.id ?? '')
 const gender1 = ref<Gender>(session.racers[0]?.gender ?? 'male')
 const gender2 = ref<Gender>(session.racers[1]?.gender ?? 'male')
-const loadError = ref('')
 
 const seenIds = new Set<string>()
 let hydrated = false
@@ -73,9 +72,8 @@ async function refresh(): Promise<void> {
     if (p2.value !== '' && !next.some((user) => user.id === p2.value)) p2.value = ''
     assignNewcomers(next)
     users.value = next
-    loadError.value = ''
-  } catch (error) {
-    loadError.value = error instanceof Error ? error.message : String(error)
+  } catch {
+    /* список игроков подтянется на следующем тике */
   } finally {
     inflight = false
   }
@@ -127,15 +125,25 @@ onBeforeUnmount(() => {
 
     <div class="frame frame--red">
       <div class="frame frame--blue">
-        <div class="stage">
-          <div class="hero" aria-hidden="true" />
+        <section class="section-1">
+          <img class="mascot" src="@/assets/images/mascot.png" alt="" draggable="false" />
 
-          <section class="panel">
-            <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
-            <h1>Начало гонки</h1>
+          <p class="bubble">
+            <span>Давайте начнем</span>
+            <span>гонку</span>
+          </p>
+        </section>
 
-            <p v-if="loadError" class="banner" role="alert">{{ loadError }}</p>
+        <section class="section-2">
+          <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+          <h1 class="title">Начало гонки</h1>
+          <p class="lead">
+            У тебя 1 минута, чтобы проехать
+            <br />
+            как можно больше!
+          </p>
 
+          <div class="form">
             <div class="field">
               <span class="field__label">Кол-во игроков:</span>
               <div class="mode" role="radiogroup" aria-label="Количество игроков">
@@ -180,10 +188,14 @@ onBeforeUnmount(() => {
                 </label>
               </div>
 
-              <div v-if="playerCount === 2" class="player">
+              <div
+                class="player"
+                :class="{ 'is-off': playerCount !== 2 }"
+                :aria-hidden="playerCount !== 2"
+              >
                 <span class="tag tag--2">Игрок №2</span>
                 <label class="select">
-                  <select v-model="p2">
+                  <select v-model="p2" :disabled="playerCount !== 2">
                     <option value="">Никнейм</option>
                     <option
                       v-for="user in selectUsers"
@@ -197,24 +209,15 @@ onBeforeUnmount(() => {
                 </label>
               </div>
             </div>
+          </div>
 
-            <button class="submit" type="button" :disabled="!canStart" @click="startRace">
+          <div class="foot">
+            <button class="start" type="button" :disabled="!canStart" @click="startRace">
               Старт
             </button>
-            <ul v-if="session.blockers.length" class="blockers">
-              <li v-for="blocker in session.blockers" :key="blocker">{{ blocker }}</li>
-            </ul>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
-    </div>
-
-    <div class="character">
-      <p class="bubble">
-        Давайте <br />
-        начнем гонку!
-      </p>
-      <img class="mascot" src="@/assets/images/mascot.png" alt="" draggable="false" />
     </div>
   </main>
 </template>
@@ -224,18 +227,15 @@ $red: #ff2b42;
 $blue: #0077ff;
 $glow: #0040ff;
 $text-dark: #1a2740;
-$bubble-start: #2e54f1;
-$bubble-end: #c5d2f8;
-$bubble-bot: #8ea4f5;
 
 .page {
   position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100dvh;
-  padding: clamp(10px, 2.2vh, 28px);
+  padding: clamp(12px, 2.4vh, 32px);
   overflow: hidden;
-  background: #0e1a50;
+  background: #000;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -287,139 +287,131 @@ $bubble-bot: #8ea4f5;
   min-width: 0;
   min-height: 0;
   overflow: visible;
-  border-radius: clamp(14px, 2.2vw, 25px);
+  border-radius: clamp(16px, 2.2vw, 25px);
 
   &--red {
-    padding: clamp(8px, 1.6vh, 22px);
-    border: clamp(4px, 0.8vw, 9px) solid $red;
+    padding: clamp(8px, 1.6vh, 36px);
+    border: clamp(8px, 0.45vw, 18px) solid $red;
     box-shadow: 0 0 24px rgba($red, 0.35);
   }
 
   &--blue {
     overflow: visible;
-    padding: clamp(10px, 2vh, 28px) clamp(18px, 2.6vw, 40px) clamp(16px, 2.4vh, 28px);
-    border: clamp(3px, 0.6vw, 7px) solid $blue;
+    border: clamp(6px, 0.35vw, 14px) solid $blue;
     box-shadow: 0 0 18px rgba($blue, 0.28);
+    display: flex;
+    position: relative;
   }
 }
 
-.stage {
+.section-1 {
+  width: 48%;
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(20rem, 1.15fr);
-  gap: clamp(12px, 2vw, 40px);
-  width: 100%;
-  height: 100%;
   min-width: 0;
   min-height: 0;
 }
 
-.hero {
-  min-width: 0;
-  min-height: 0;
-}
-
-.character {
+.mascot {
   position: absolute;
-  left: -23px;
-  bottom: 0;
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  max-width: 38%;
+  left: -15%;
+  bottom: -24%;
+  z-index: 3;
+  width: 92%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left bottom;
   pointer-events: none;
+  user-select: none;
 }
 
 .bubble {
-  position: relative;
-  z-index: 1;
-  margin: 0 0 0 30%;
-  padding: 40px 70px;
+  position: absolute;
+  left: 30%;
+  top: 4%;
+  z-index: 4;
+  box-sizing: border-box;
+  width: clamp(240px, 26vw, 30vw);
+  aspect-ratio: 668 / 200;
+  margin: 0;
+  padding: 6% 10% 12% 10%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   color: #fff;
-  font-size: clamp(1.15rem, 1.1rem + 0.7vw, 1.85rem);
+  font-size: clamp(22px, 2.4vw, 3vw);
   font-weight: 500;
-  line-height: 1.2;
+  line-height: 1.25;
   text-align: center;
-  border-radius: 28px;
-  background: linear-gradient(315deg, $bubble-start 0%, $bubble-end 100%);
+  background: url(/src/assets/images/bubble-black-2.png) center / 100% 100% no-repeat;
+  pointer-events: none;
 
-  &::after {
-    content: '';
-    position: absolute;
-    left: 28%;
-    bottom: -16px;
-    border: 12px solid transparent;
-    border-top-color: $bubble-bot;
-    border-bottom-width: 0;
+  span {
+    display: block;
+    white-space: nowrap;
   }
+}
+
+.section-2 {
+  display: flex;
+  flex-direction: column;
+  width: 52%;
+  height: 100%;
+  align-items: stretch;
+  padding: 40px 40px 84px 12px;
+  min-width: 0;
+  min-height: 0;
+  z-index: 4;
 }
 
 .logo {
   display: block;
-  width: min(100%, 210px);
-  height: auto;
-  margin: 0 auto;
+  width: 33%;
+  margin: 3% auto 3%;
   pointer-events: none;
   user-select: none;
 }
 
-.mascot {
-  display: block;
-  width: auto;
-  max-width: 100%;
-  height: min(52vh, 460px);
-  object-fit: contain;
-  object-position: left bottom;
-  user-select: none;
-}
-
-.panel {
-  position: relative;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-self: center;
-  gap: clamp(14px, 2.2vh, 22px);
-  width: 100%;
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  justify-self: end;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-h1 {
-  margin: 0;
+.title {
+  margin: 0 0 18px;
   color: #fff;
-  font-size: 70px;
+  font-size: clamp(1rem, 4vw, 9rem);
   font-weight: 500;
+  line-height: 1.1;
+  text-align: center;
+  margin-bottom: 4%;
+}
+
+.lead {
+  margin: 0 auto 0;
+  color: #fff;
+  font-size: clamp(16px, 1.2vw, 3vw);
+  font-weight: 700;
+  line-height: 1.35;
   text-align: center;
 }
 
-.banner {
-  margin: 0;
-  padding: 0.65rem 0.9rem;
-  color: #ffd0d5;
-  background: rgba($red, 0.18);
-  border-radius: 12px;
-  font-size: 0.95rem;
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  gap: clamp(18px, 2.2vh, 4vh);
+  width: min(100%, 34vw);
+  margin: 0 auto;
+  min-height: 0;
 }
 
 .field {
   display: grid;
-  gap: 0.55rem;
+  gap: clamp(8px, 0.9vh, 18px);
+  width: 100%;
 }
 
 .field__label {
   color: #fff;
-  font-size: clamp(1rem, 1.3vw, 1.2rem);
+  font-size: clamp(16px, 1.15vw, 2.4vw);
   font-weight: 500;
   text-align: center;
 }
@@ -427,19 +419,19 @@ h1 {
 .mode {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.85rem;
-  width: 350px;
-  margin: 0 auto 26px auto;
+  gap: clamp(10px, 0.9vw, 1.2vw);
+  width: min(100%, 24vw);
+  margin: 0 auto;
 }
 
 .mode__btn {
-  height: clamp(46px, 6vh, 54px);
+  height: clamp(44px, 5.2vh, 8vh);
   color: #fff;
-  font-size: 1.05rem;
+  font-size: clamp(16px, 1.1vw, 2.2vw);
   font-weight: 600;
   cursor: pointer;
   background: transparent;
-  border: 2px solid #fff;
+  border: clamp(2px, 0.12vw, 4px) solid #fff;
   border-radius: 999px;
 
   &.is-on {
@@ -450,28 +442,32 @@ h1 {
 
 .players {
   display: grid;
-  gap: clamp(12px, 1.8vh, 18px);
-  width: 500px;
-  margin: 0 auto;
+  gap: clamp(12px, 1.6vh, 28px);
+  width: 100%;
 }
 
 .player {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.75rem;
+  gap: clamp(10px, 0.8vw, 24px);
   align-items: center;
   min-width: 0;
+
+  &.is-off {
+    visibility: hidden;
+    pointer-events: none;
+  }
 }
 
 .tag {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 7.2rem;
-  height: clamp(46px, 6vh, 54px);
-  padding: 0 1.15rem;
+  min-width: clamp(110px, 8.4vw, 12vw);
+  height: clamp(44px, 5.2vh, 8vh);
+  padding: 0 clamp(1rem, 1.1vw, 2rem);
   color: #fff;
-  font-size: 1rem;
+  font-size: clamp(16px, 1.05vw, 2.1vw);
   font-weight: 700;
   white-space: nowrap;
   border-radius: 999px;
@@ -492,10 +488,10 @@ h1 {
 
   select {
     width: 100%;
-    height: clamp(46px, 6vh, 54px);
-    padding: 0 2.6rem 0 1.2rem;
+    height: clamp(44px, 5.2vh, 8vh);
+    padding: 0 clamp(2.8rem, 2.4vw, 4.2rem) 0 clamp(1.1rem, 1.2vw, 2rem);
     color: $text-dark;
-    font-size: max(16px, 1.05rem);
+    font-size: clamp(16px, 1.1vw, 2.2vw);
     background: #fff;
     border: 0;
     border-radius: 999px;
@@ -512,10 +508,10 @@ h1 {
     content: '';
     position: absolute;
     top: 50%;
-    right: 1.15rem;
+    right: clamp(1rem, 1.2vw, 1.8rem);
     width: 0;
     height: 0;
-    border: 7px solid transparent;
+    border: clamp(6px, 0.4vw, 12px) solid transparent;
     border-top-color: $blue;
     border-bottom-width: 0;
     transform: translateY(-35%);
@@ -523,15 +519,28 @@ h1 {
   }
 }
 
-.submit {
-  width: 340px;
-  margin: 40px auto 0 auto;
-  height: clamp(52px, 7vh, 64px);
+.foot {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-top: auto;
+  padding-top: clamp(18px, 2vh, 78px);
+}
+
+.start {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: clamp(210px, 16vw, 20vw);
+  height: clamp(52px, 5.5vh, 8vh);
+  margin: 0 auto;
+  padding: 0 clamp(1.4rem, 1.2vw, 2.5rem);
   color: #fff;
-  font-size: clamp(1.15rem, 1.8vw, 1.45rem);
-  font-weight: 700;
+  font-size: clamp(20px, 1.25vw, 2.4vw);
+  font-weight: 500;
   cursor: pointer;
-  background: $red;
+  background: #ff2b42;
   border: 0;
   border-radius: 999px;
 
@@ -542,52 +551,6 @@ h1 {
 
   &:not(:disabled):active {
     filter: brightness(0.92);
-  }
-}
-
-.blockers {
-  margin: 0;
-  padding-left: 1.2rem;
-  color: #f0c674;
-  font-size: 0.88rem;
-}
-
-@media (orientation: portrait) {
-  .page {
-    overflow: auto;
-  }
-
-  .stage {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-
-  .hero {
-    min-height: 0;
-  }
-
-  .character {
-    left: 50%;
-    max-width: 72%;
-    transform: translateX(-50%);
-    align-items: center;
-  }
-
-  .bubble {
-    margin-left: 0;
-  }
-
-  .mascot {
-    height: min(36vh, 300px);
-  }
-
-  .panel {
-    justify-self: stretch;
-    width: 100%;
-  }
-
-  .player {
-    grid-template-columns: 1fr;
   }
 }
 </style>
