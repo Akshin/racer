@@ -1,0 +1,6 @@
+Node.js 24.20.0 (официальные tar.gz с nodejs.org)
+darwin-arm64 — чип Apple (M1/M2/M3/M4)
+darwin-x64   — Intel
+
+Скачать/обновить: ./fetch-node.sh
+Папки node/ в git не кладём — они появляются после fetch и попадают в zip через pack-sensor-test.sh.

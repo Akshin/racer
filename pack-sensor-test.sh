@@ -1,6 +1,7 @@
 #!/bin/bash
 # Собирает velo-game, velo-node и MAC в zip для теста датчиков.
 # node_modules, dist, кэш и служебные файлы в архив не попадают.
+# Portable Node для MAC/PLAN_B качается сюда же (без sudo).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -12,6 +13,9 @@ DEST="$TMP/$NAME"
 
 cleanup() { rm -rf "$TMP"; }
 trap cleanup EXIT
+
+echo "Проверяю Node для MAC/PLAN_B..."
+/bin/bash "$ROOT/MAC/PLAN_B/fetch-node.sh"
 
 mkdir -p "$DEST"
 
@@ -28,13 +32,24 @@ rsync -a --copy-links \
   --exclude '*.tsbuildinfo' \
   --exclude '*.log' \
   --exclude .vite \
+  --exclude .cache \
   "$ROOT/velo-game" \
   "$ROOT/velo-node" \
   "$ROOT/MAC" \
   "$DEST/"
 
-# start.command должен остаться исполняемым после распаковки.
-chmod +x "$DEST/MAC/start.command"
+chmod +x "$DEST/MAC/start.command" "$DEST/MAC/PLAN_B/start.command" "$DEST/MAC/PLAN_B/fetch-node.sh"
+
+if [ -f "$DEST/velo-node/.env" ]; then
+  if grep -q '^SOURCE=' "$DEST/velo-node/.env"; then
+    sed -i.bak 's/^SOURCE=.*/SOURCE=ant/' "$DEST/velo-node/.env"
+    rm -f "$DEST/velo-node/.env.bak"
+  else
+    printf '\nSOURCE=ant\n' >> "$DEST/velo-node/.env"
+  fi
+else
+  sed 's/^SOURCE=.*/SOURCE=ant/' "$ROOT/velo-node/.env.example" > "$DEST/velo-node/.env"
+fi
 
 rm -f "$OUT"
 (
@@ -45,5 +60,5 @@ rm -f "$OUT"
 echo "Архив: $OUT"
 echo "Размер: $(du -sh "$OUT" | awk '{print $1}')"
 echo
-echo "Другу: распаковать, в velo-node и velo-game сделать npm install,"
-echo "в velo-node/.env выставить SOURCE=ble или ant, затем двойной клик по MAC/start.command"
+echo "Обычный путь: npm install в velo-node и velo-game, затем MAC/start.command"
+echo "Без админа / без системного Node: MAC/PLAN_B/start.command (SOURCE=ant уже в .env)"

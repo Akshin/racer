@@ -6,5 +6,6 @@
 | --- | --- | --- | --- |
 | Windows | `WIN` | двойной клик по `start.bat` | `WIN/ИНСТРУКЦИЯ.txt` |
 | macOS | `MAC` | двойной клик по `start.command` | `MAC/ИНСТРУКЦИЯ.txt` |
+| macOS без админа | `MAC/PLAN_B` | двойной клик по `start.command` | `MAC/PLAN_B/ИНСТРУКЦИЯ.txt` |
 
 Инструкции рассчитаны на человека без программирования. Как устроен код — `velo-node/README.md` и `velo-game/README.md`.
