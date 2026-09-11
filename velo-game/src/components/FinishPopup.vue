@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Результаты заезда: для двоих — «I / II Место», для одного — карточка игрока.
+ * Результаты заезда: соло — карточка игрока, дуо — I / II место.
  * Дальше всегда идёт попап «Гонка закончена!».
  */
 import { computed } from 'vue'
@@ -29,6 +29,12 @@ const props = defineProps<{
 
 const duo = computed(() => props.players.length > 1)
 
+function formatKm(meters: number): string {
+  const km = meters / 1000
+  if (km >= 10 || Number.isInteger(km)) return `${Math.round(km)} км`
+  return `${km.toFixed(1)} км`
+}
+
 const rows = computed<FinishRow[]>(() => {
   const ranked = [...props.players].sort((a, b) => b.meters - a.meters || a.index - b.index)
   return props.players.map((player) => {
@@ -37,12 +43,14 @@ const rows = computed<FinishRow[]>(() => {
       ...player,
       name: player.nick || `Игрок ${player.index + 1}`,
       raceRank,
-      km: `${(player.meters / 1000).toFixed(2)} км`,
+      km: formatKm(player.meters),
       kmh: `${Math.round(player.meters / 1000 / HOURS)} км/ч`,
       board: player.place == null ? '—' : String(player.place),
     }
   })
 })
+
+const solo = computed(() => rows.value[0] ?? null)
 
 const confetti = Array.from({ length: 42 }, (_, i) => ({
   id: i,
@@ -56,9 +64,10 @@ const confetti = Array.from({ length: 42 }, (_, i) => ({
 </script>
 
 <template>
-  <div class="popup">
+  <div class="popup" :class="{ 'popup--solo': !duo }">
     <span
       v-for="piece in confetti"
+      v-show="duo"
       :key="piece.id"
       class="confetti"
       :style="{
@@ -74,18 +83,52 @@ const confetti = Array.from({ length: 42 }, (_, i) => ({
 
     <div class="frame frame--red">
       <div class="frame frame--blue">
-        <img class="mascot" src="@/assets/images/mascot-flag.png" alt="" draggable="false" />
+        <img
+          v-if="duo"
+          class="mascot"
+          src="@/assets/images/mascot-flag.png"
+          alt=""
+          draggable="false"
+        />
 
         <div class="panel">
           <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
           <h2>Финиш!</h2>
 
-          <div class="card" :class="{ 'card--duo': duo }">
+          <div v-if="solo && !duo" class="card card--solo">
+            <div class="solo">
+              <div class="solo__info">
+                <span class="tag tag--1">Игрок №{{ solo.index + 1 }}</span>
+                <p class="name">{{ solo.name }}</p>
+                <div class="stats">
+                  <p class="stat">
+                    <span>Расстояние:</span>
+                    <b>{{ solo.km }}</b>
+                  </p>
+                  <span class="stats__rule" aria-hidden="true" />
+                  <p class="stat">
+                    <span>Ср. скорость:</span>
+                    <b>{{ solo.kmh }}</b>
+                  </p>
+                </div>
+              </div>
+
+              <div class="board">
+                <p class="board__label">Место в турнирной таблице</p>
+                <p class="board__value">
+                  <strong>{{ solo.board }}</strong>
+                  <span>место</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="card card--duo">
             <article v-for="row in rows" :key="row.index" class="racer">
               <span class="tag" :class="`tag--${row.index + 1}`">Игрок №{{ row.index + 1 }}</span>
 
               <div class="racer__row">
-                <span v-if="duo" class="medal" :class="`medal--${row.raceRank}`">
+                <span class="medal" :class="`medal--${row.raceRank}`">
                   {{ row.raceRank === 1 ? 'I Место' : 'II Место' }}
                 </span>
 
@@ -104,7 +147,7 @@ const confetti = Array.from({ length: 42 }, (_, i) => ({
                   </div>
                 </div>
 
-                <div v-if="duo" class="board">
+                <div class="board board--duo">
                   <p class="board__label">Место на турнирной таблице</p>
                   <p class="board__value">
                     <strong>{{ row.board }}</strong>
@@ -113,14 +156,6 @@ const confetti = Array.from({ length: 42 }, (_, i) => ({
                 </div>
               </div>
             </article>
-
-            <div v-if="!duo && rows[0]" class="bar">
-              <span class="bar__label">Место на турнирной таблице</span>
-              <p class="bar__pill">
-                <strong>{{ rows[0].board }}</strong>
-                <span>место</span>
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -167,7 +202,7 @@ $blue: #0077ff;
 
   &--blue {
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     border: clamp(3px, 0.55vw, 7px) solid $blue;
     box-shadow: 0 0 18px rgb(0 119 255 / 35%);
   }
@@ -203,6 +238,13 @@ $blue: #0077ff;
   text-align: center;
 }
 
+.popup--solo .panel {
+  width: 100%;
+  margin: 0;
+  gap: clamp(16px, 2.4vh, 36px);
+  padding: clamp(28px, 5vh, 72px) clamp(36px, 6vw, 96px);
+}
+
 .logo {
   width: min(100%, 210px);
   height: auto;
@@ -210,11 +252,19 @@ $blue: #0077ff;
   user-select: none;
 }
 
+.popup--solo .logo {
+  width: min(42%, 280px);
+}
+
 h2 {
   margin: 0;
   font-size: clamp(2.6rem, 6vw, 4.6rem);
   font-weight: 700;
   line-height: 0.95;
+}
+
+.popup--solo h2 {
+  font-size: clamp(3rem, 5.5vw, 7rem);
 }
 
 .card {
@@ -227,6 +277,25 @@ h2 {
   &--duo .racer + .racer {
     border-top: 1px solid rgb(255 255 255 / 35%);
   }
+}
+
+.card--solo {
+  width: min(100%, 92rem);
+  padding: clamp(28px, 4.2vh, 56px) clamp(32px, 4vw, 72px);
+  background: rgb(8 18 48 / 72%);
+  border-radius: clamp(24px, 2.2vw, 48px);
+}
+
+.solo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(24px, 4vw, 72px);
+}
+
+.solo__info {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .racer {
@@ -256,15 +325,19 @@ h2 {
   }
 }
 
+.popup--solo .tag {
+  min-width: 0;
+  height: clamp(28px, 3.2vh, 48px);
+  margin-bottom: clamp(12px, 1.8vh, 24px);
+  padding: 0 clamp(14px, 1.2vw, 22px);
+  font-size: clamp(0.85rem, 1.1vw, 1.4rem);
+}
+
 .racer__row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.85rem;
   align-items: center;
-}
-
-.card:not(.card--duo) .racer__row {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .medal {
@@ -304,10 +377,19 @@ h2 {
   white-space: nowrap;
 }
 
+.popup--solo .name {
+  margin: 0 0 clamp(16px, 2vh, 28px);
+  font-size: clamp(2.4rem, 4.6vw, 6.2rem);
+}
+
 .stats {
   display: flex;
   align-items: stretch;
   gap: 0.85rem;
+}
+
+.popup--solo .stats {
+  gap: clamp(16px, 1.8vw, 32px);
 }
 
 .stat {
@@ -326,6 +408,11 @@ h2 {
   }
 }
 
+.popup--solo .stat {
+  font-size: clamp(1rem, 1.35vw, 1.85rem);
+  gap: 0.2rem;
+}
+
 .stats__rule {
   width: 1px;
   background: rgb(255 255 255 / 55%);
@@ -333,75 +420,60 @@ h2 {
 
 .board {
   flex: 0 0 auto;
-  width: 7.4rem;
-  padding: 0.55rem 0.5rem 0.5rem;
+  width: clamp(160px, 16vw, 280px);
+  padding: clamp(14px, 1.6vh, 22px) clamp(14px, 1.4vw, 22px) clamp(12px, 1.4vh, 18px);
   text-align: center;
   background: $blue;
+  border-radius: clamp(18px, 1.6vw, 28px);
+}
+
+.board--duo {
+  width: 7.4rem;
+  padding: 0.55rem 0.5rem 0.5rem;
   border-radius: 16px;
 }
 
 .board__label {
-  margin: 0 0 0.4rem;
-  font-size: 0.62rem;
+  margin: 0 0 0.55rem;
+  font-size: clamp(0.82rem, 1.05vw, 1.2rem);
   font-weight: 500;
   line-height: 1.2;
 }
 
+.board--duo .board__label {
+  font-size: 0.62rem;
+}
+
 .board__value {
   margin: 0;
-  padding: 0.28rem 0.2rem 0.2rem;
+  padding: clamp(10px, 1.2vh, 16px) 0.4rem clamp(8px, 1vh, 12px);
   color: $blue;
   background: #fff;
-  border-radius: 10px;
+  border-radius: clamp(12px, 1.1vw, 18px);
 
   strong {
     display: block;
-    font-size: 1.25rem;
+    font-size: clamp(1.8rem, 2.8vw, 3.4rem);
     font-weight: 700;
     line-height: 1;
+  }
+
+  span {
+    font-size: clamp(0.78rem, 0.95vw, 1.1rem);
+    font-weight: 500;
+  }
+}
+
+.board--duo .board__value {
+  padding: 0.28rem 0.2rem 0.2rem;
+  border-radius: 10px;
+
+  strong {
+    font-size: 1.25rem;
   }
 
   span {
     font-size: 0.68rem;
-    font-weight: 500;
-  }
-}
-
-.bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-  padding: 0.55rem 0.7rem 0.55rem 1.15rem;
-  background: $blue;
-}
-
-.bar__label {
-  font-size: clamp(0.92rem, 1.4vw, 1.1rem);
-  font-weight: 500;
-}
-
-.bar__pill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 5.4rem;
-  margin: 0;
-  padding: 0.2rem 0.95rem 0.15rem;
-  color: $blue;
-  background: #fff;
-  border-radius: 999px;
-
-  strong {
-    font-size: 1.35rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  span {
-    font-size: 0.7rem;
-    font-weight: 500;
   }
 }
 
@@ -429,12 +501,17 @@ h2 {
     height: min(52%, 46vh);
   }
 
-  .racer__row {
-    grid-template-columns: minmax(0, 1fr);
+  .solo {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .board {
     width: 100%;
+  }
+
+  .racer__row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

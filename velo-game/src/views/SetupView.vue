@@ -117,7 +117,11 @@ function time(at: number): string {
     </section>
 
     <section class="card">
-      <button class="primary wide" :disabled="!session.canRace" @click="router.push('/leaderboard')">
+      <button
+        class="primary wide"
+        :disabled="!session.canRace"
+        @click="router.push('/leaderboard')"
+      >
         Перейти к лидерборду
       </button>
       <ul v-if="session.blockers.length" class="blockers">
