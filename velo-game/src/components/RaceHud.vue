@@ -20,6 +20,24 @@ const TICK_MINOR_INNER = 86
 const NUM_R = 70
 const NEEDLE_R = 78
 const FILL_R = 76
+/** Первая реплика — через 10 с после старта. */
+const BUBBLE_DELAY_MS = 10_000
+const BUBBLE_SHOW_MS = 5_000
+const BUBBLE_GAP_MS = 10_000
+const BUBBLE_CYCLE_MS = BUBBLE_SHOW_MS + BUBBLE_GAP_MS
+
+const LINES = [
+  'Я знаю,\nты можешь\nлучше!',
+  'Крути педали —\nне зевай!',
+  'Ещё рывок —\nи ты первый!',
+  'Давай, не сбавляй\nоборот!',
+  'Скорость есть,\nдобавь огня!',
+  'Соперник не дремлет —\nжми!',
+  'Финиш ближе,\nчем кажется!',
+  'VK Видео\nболеет за тебя!',
+  'Ноги помнят дорогу —\nедем!',
+  'Рекорд ждёт.\nДогони его!',
+] as const
 
 const props = defineProps<LaneHud>()
 
@@ -55,6 +73,18 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
   const label = major ? polar(NUM_R, deg) : null
   return { value, major, inner, outer, label }
 })
+
+const lineIndex = computed(() => {
+  const t = props.elapsedMs - BUBBLE_DELAY_MS
+  if (t < 0) return props.index % LINES.length
+  return (props.index + Math.floor(t / BUBBLE_CYCLE_MS)) % LINES.length
+})
+const line = computed(() => LINES[lineIndex.value] ?? LINES[0])
+const bubbleVisible = computed(() => {
+  if (!props.racing) return false
+  const t = props.elapsedMs - BUBBLE_DELAY_MS
+  return t >= 0 && t % BUBBLE_CYCLE_MS < BUBBLE_SHOW_MS
+})
 </script>
 
 <template>
@@ -64,6 +94,7 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
   >
     <div class="hud__bottom">
       <div class="gauge">
+        <p v-if="bubbleVisible" :key="line" class="bubble">{{ line }}</p>
         <img class="gauge__bot" :src="mascotUrl" alt="" />
         <svg
           class="gauge__dial"
@@ -208,7 +239,8 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
   justify-content: space-between;
   z-index: 1;
   gap: 0.35rem;
-  padding-top: 7.4rem;
+  overflow: visible;
+  padding-top: clamp(7.5rem, 16vh, 22vh);
 }
 
 .gauge {
@@ -216,6 +248,7 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
   flex: 0 0 43%;
   width: 43%;
   padding: 0.08rem 0.55rem 0.05rem;
+  overflow: visible;
   background: rgb(8 10 14 / 80%);
   border: 1px solid rgb(255 255 255 / 10%);
   border-radius: 25px;
@@ -224,7 +257,7 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
 
 .gauge__bot {
   position: absolute;
-  z-index: 1;
+  z-index: 3;
   bottom: 100%;
   width: 34%;
   height: auto;
@@ -239,6 +272,98 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
 
   .hud--player-2 & {
     right: 0;
+  }
+}
+
+.bubble {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  width: 12.4em;
+  margin: 0;
+  padding: 0.62em 0.8em 0.68em;
+  color: #fff;
+  font-size: max(16px, 1.15vw);
+  font-weight: 700;
+  line-height: 1.18;
+  text-align: center;
+  white-space: pre-line;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  background: #111;
+  border: max(2px, 0.12vw) solid var(--player);
+  border-radius: 0.85em;
+  filter:
+    drop-shadow(0 0 0.32em var(--player))
+    drop-shadow(0 0 0.8em color-mix(in srgb, var(--player) 68%, transparent));
+  pointer-events: none;
+  animation: bubble-in 0.4s ease;
+
+  .hud--player-1 & {
+    left: 28%;
+    bottom: calc(100% + 0.4em);
+  }
+
+  .hud--player-2 & {
+    right: 28%;
+    bottom: calc(100% + 0.4em);
+  }
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 46%;
+    width: 0.72em;
+    height: 0.82em;
+  }
+
+  &::before {
+    background: var(--player);
+  }
+
+  &::after {
+    background: #111;
+  }
+
+  .hud--player-1 &::before,
+  .hud--player-1 &::after {
+    left: 0;
+    clip-path: polygon(100% 0, 0 50%, 100% 100%);
+  }
+
+  .hud--player-1 &::before {
+    transform: translate(-80%, -50%) scale(1.14);
+  }
+
+  .hud--player-1 &::after {
+    transform: translate(-70%, -50%);
+  }
+
+  .hud--player-2 &::before,
+  .hud--player-2 &::after {
+    right: 0;
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+
+  .hud--player-2 &::before {
+    transform: translate(80%, -50%) scale(1.14);
+  }
+
+  .hud--player-2 &::after {
+    transform: translate(70%, -50%);
+  }
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -405,7 +530,11 @@ const ticks = Array.from({ length: SPEED_MAX + 1 }, (_, value) => {
     bottom: 1.4rem;
     left: 2rem;
     gap: 1.4rem;
-    padding-top: 12rem;
+    padding-top: 18vh;
+  }
+
+  .bubble {
+    font-size: 1.35vw;
   }
 
   .gauge {

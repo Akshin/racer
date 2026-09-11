@@ -74,6 +74,7 @@ const lanes = computed<LaneHud[]>(() =>
       sensor: check.sensor,
       elapsedMs: elapsedMs.value,
       nick: session.racers[index]?.nick ?? null,
+      racing: racing.value,
       solo: solo.value,
     }
   }),
@@ -186,6 +187,21 @@ onMounted(async () => {
         ]
       : [{ index: 0, nick: 'Тугарин Змей', meters: 15_000, place: 1245 }]
     showFinish.value = true
+  } else if (preview === 'hud' || preview === 'hud-solo') {
+    const duo = preview !== 'hud-solo'
+    session.setRacers(
+      { id: 'preview-1', nick: 'Тугарин Змей', gender: 'male' },
+      duo ? { id: 'preview-2', nick: 'Гонщик', gender: 'female' } : null,
+      undefined,
+      duo ? 2 : 1,
+    )
+    frozenTelemetry.value = [
+      { id: 'p1', connected: true, cadence: 90, speed: 22, distance: 410 },
+      ...(duo ? [{ id: 'p2' as const, connected: true, cadence: 75, speed: 18, distance: 330 }] : []),
+    ]
+    racing.value = true
+    elapsedMs.value = 18_000
+    waitingForPedals.value = false
   } else {
     session.resetRace()
     waitingForPedals.value = true

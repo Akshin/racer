@@ -28,7 +28,10 @@ const router = createRouter({
       // Без пройденной проверки экран гонки бесполезен — возвращаем на страницу проверки.
       // Смотрим на `canRace`, а не на `ready`: после F5 соединение поднимается не мгновенно.
       beforeEnter: (to) => {
-        if (import.meta.env.DEV && ['finish', 'solo', 'over'].includes(String(to.query.popup))) {
+        if (
+          import.meta.env.DEV &&
+          ['finish', 'solo', 'over', 'hud', 'hud-solo'].includes(String(to.query.popup))
+        ) {
           return true
         }
         return useSessionStore().canRace ? true : { name: 'setup' }
