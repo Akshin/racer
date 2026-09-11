@@ -89,7 +89,10 @@ const bubbleVisible = computed(() => {
 <template>
   <section
     class="hud"
-    :class="[`hud--player-${index + 1}`, { 'hud--offline': !telemetry.connected, 'hud--solo': solo }]"
+    :class="[
+      `hud--player-${index + 1}`,
+      { 'hud--offline': !telemetry.connected, 'hud--solo': solo },
+    ]"
   >
     <div class="hud__bottom">
       <div class="gauge">
@@ -257,7 +260,7 @@ const bubbleVisible = computed(() => {
 .gauge__bot {
   position: absolute;
   z-index: 3;
-  bottom: calc(100% + 0.55em);
+  bottom: calc(100% - 2em);
   display: block;
   width: 42%;
   height: auto;
@@ -292,8 +295,7 @@ const bubbleVisible = computed(() => {
   background: #111;
   border: max(2px, 0.12vw) solid var(--player);
   border-radius: 0.85em;
-  filter:
-    drop-shadow(0 0 0.32em var(--player))
+  filter: drop-shadow(0 0 0.32em var(--player))
     drop-shadow(0 0 0.8em color-mix(in srgb, var(--player) 68%, transparent));
   pointer-events: none;
   animation: bubble-in 0.4s ease;

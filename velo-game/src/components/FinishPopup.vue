@@ -151,12 +151,15 @@ onBeforeUnmount(() => {
                 </p>
               </div>
             </div>
-            <div class="board">
-              <p class="board__label">Место в турнирной таблице</p>
-              <p class="board__value">
-                <strong>{{ solo.board }}</strong>
-                <span>место</span>
-              </p>
+            <div class="board-side">
+              <img class="fat" src="@/assets/gifs/fat.gif" alt="" draggable="false" />
+              <div class="board">
+                <p class="board__label">Место в турнирной таблице</p>
+                <p class="board__value">
+                  <strong>{{ solo.board }}</strong>
+                  <span>место</span>
+                </p>
+              </div>
             </div>
           </div>
 
@@ -183,12 +186,28 @@ onBeforeUnmount(() => {
                     </p>
                   </div>
                 </div>
-                <div class="board">
-                  <p class="board__label">Место в турнирной таблице</p>
-                  <p class="board__value">
-                    <strong>{{ row.board }}</strong>
-                    <span>место</span>
-                  </p>
+                <div class="board-side">
+                  <img
+                    v-if="row.index === 0"
+                    class="fat"
+                    src="@/assets/gifs/fat.gif"
+                    alt=""
+                    draggable="false"
+                  />
+                  <img
+                    v-else
+                    class="slim"
+                    src="@/assets/gifs/slim.gif"
+                    alt=""
+                    draggable="false"
+                  />
+                  <div class="board">
+                    <p class="board__label">Место в турнирной таблице</p>
+                    <p class="board__value">
+                      <strong>{{ row.board }}</strong>
+                      <span>место</span>
+                    </p>
+                  </div>
                 </div>
               </article>
               <hr v-if="i == 0" />
@@ -388,6 +407,19 @@ h2 {
     }
   }
 
+  .board-side {
+    flex: 0 0 auto;
+    gap: clamp(12px, 1.4vw, 2vw);
+
+    .fat {
+      height: clamp(148px, 22vh, 28vh);
+    }
+
+    .board {
+      width: clamp(200px, 18vw, 22vw);
+    }
+  }
+
   .board {
     display: flex;
     flex-direction: column;
@@ -429,9 +461,24 @@ h2 {
 
   .racer {
     display: grid;
-    grid-template-columns: clamp(140px, 16vw, 20vw) minmax(0, 1fr) clamp(160px, 16vw, 20vw);
+    grid-template-columns: clamp(140px, 16vw, 20vw) minmax(0, 1fr) auto;
     gap: clamp(16px, 2.4vw, 4vw);
     align-items: center;
+  }
+
+  .board-side {
+    justify-self: end;
+    gap: clamp(10px, 1.2vw, 1.8vw);
+
+    .fat,
+    .slim {
+      height: clamp(112px, 15vh, 20vh);
+    }
+
+    .board {
+      width: clamp(160px, 16vw, 20vw);
+      max-width: none;
+    }
   }
 
   .medal {
@@ -604,6 +651,25 @@ h2 {
     color: #2c333d;
     background: linear-gradient(180deg, #f4f6f8 0%, #c5c9d0 52%, #9aa0aa 100%);
   }
+}
+
+.board-side {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: clamp(10px, 1.2vw, 24px);
+}
+
+.fat,
+.slim {
+  position: relative;
+  left: clamp(-10px, -0.8vw, -18px);
+  flex: 0 0 auto;
+  width: auto;
+  height: clamp(120px, 17vh, 220px);
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
 }
 
 .board {

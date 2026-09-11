@@ -26,7 +26,7 @@ const mocks: { players: FinishPlayer[] }[] = [
   },
 ]
 
-const mock = mocks[3]
+const mock = mocks[1]
 </script>
 
 <template>
