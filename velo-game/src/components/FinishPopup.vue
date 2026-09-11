@@ -144,6 +144,7 @@ onBeforeUnmount(() => {
                   <span>Расстояние:</span>
                   <b>{{ solo.distance }}</b>
                 </p>
+                <span class="stats__rule" aria-hidden="true" />
                 <p class="stat">
                   <span>Ср. скорость:</span>
                   <b>{{ solo.speed }}</b>
@@ -160,32 +161,38 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-else class="duo-wrapper">
-            <article v-for="row in rows" :key="row.index" class="racer">
-              <span class="medal" :class="`medal--${row.raceRank}`">
-                {{ row.raceRank === 1 ? 'I Место' : 'II Место' }}
-              </span>
-              <div class="info">
-                <span class="tag" :class="`tag--${row.index + 1}`">Игрок №{{ row.index + 1 }}</span>
-                <p class="name">{{ row.name }}</p>
-                <div class="stats">
-                  <p class="stat">
-                    <span>Расстояние:</span>
-                    <b>{{ row.distance }}</b>
-                  </p>
-                  <p class="stat">
-                    <span>Ср. скорость:</span>
-                    <b>{{ row.speed }}</b>
+            <template v-for="(row, i) in rows" :key="row.index">
+              <article class="racer">
+                <span class="medal" :class="`medal--${row.raceRank}`">
+                  {{ row.raceRank === 1 ? 'I Место' : 'II Место' }}
+                </span>
+                <div class="info">
+                  <span class="tag" :class="`tag--${row.index + 1}`"
+                    >Игрок №{{ row.index + 1 }}</span
+                  >
+                  <p class="name">{{ row.name }}</p>
+                  <div class="stats">
+                    <p class="stat">
+                      <span>Расстояние:</span>
+                      <b>{{ row.distance }}</b>
+                    </p>
+                    <span class="stats__rule" aria-hidden="true" />
+                    <p class="stat">
+                      <span>Ср. скорость:</span>
+                      <b>{{ row.speed }}</b>
+                    </p>
+                  </div>
+                </div>
+                <div class="board">
+                  <p class="board__label">Место в турнирной таблице</p>
+                  <p class="board__value">
+                    <strong>{{ row.board }}</strong>
+                    <span>место</span>
                   </p>
                 </div>
-              </div>
-              <div class="board">
-                <p class="board__label">Место в турнирной таблице</p>
-                <p class="board__value">
-                  <strong>{{ row.board }}</strong>
-                  <span>место</span>
-                </p>
-              </div>
-            </article>
+              </article>
+              <hr v-if="i == 0" />
+            </template>
           </div>
         </div>
       </div>
@@ -327,20 +334,192 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: clamp(24px, 4vw, 80px);
+  gap: clamp(32px, 5vw, 8vw);
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: clamp(8px, 2vh, 4vh) clamp(28px, 4vw, 6vw);
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .tag {
+    min-width: clamp(120px, 8vw, 12vw);
+    height: clamp(36px, 4.4vh, 7vh);
+    margin-bottom: clamp(10px, 1.4vh, 2.4vh);
+    padding: 0 clamp(16px, 1.4vw, 2.2vw);
+    font-size: clamp(16px, 1.2vw, 2vw);
+  }
+
+  .name {
+    margin: 0 0 clamp(16px, 2vh, 3.2vh);
+    font-size: clamp(2.6rem, 5.4vw, 8vw);
+    font-weight: 700;
+    line-height: 0.95;
+  }
+
+  .stats {
+    display: flex;
+    align-items: stretch;
+    gap: clamp(20px, 2.2vw, 3.6vw);
+  }
+
+  .stats__rule {
+    width: clamp(1px, 0.08vw, 3px);
+    background: rgb(255 255 255 / 45%);
+  }
+
+  .stat {
+    gap: 0.2em;
+    font-size: clamp(18px, 1.55vw, 2.4vw);
+
+    span {
+      color: rgb(255 255 255 / 72%);
+      font-weight: 500;
+    }
+
+    b {
+      font-size: 1.05em;
+      font-weight: 700;
+    }
+  }
+
+  .board {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: clamp(200px, 18vw, 22vw);
+    padding: clamp(16px, 1.8vh, 2.6vh) clamp(16px, 1.6vw, 2.2vw) clamp(14px, 1.5vh, 2.2vh);
+    border-radius: clamp(24px, 1.8vw, 2.6vw);
+  }
+
+  .board__label {
+    margin: 0 0 clamp(10px, 1.2vh, 1.8vh);
+    font-size: clamp(16px, 1.2vw, 1.8vw);
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .board__value {
+    padding: clamp(14px, 1.6vh, 2.4vh) 0.4em clamp(10px, 1.2vh, 1.8vh);
+    border-radius: clamp(16px, 1.2vw, 1.8vw);
+
+    strong {
+      font-size: clamp(2.2rem, 3.6vw, 5.2vw);
+    }
+
+    span {
+      font-size: clamp(14px, 1.05vw, 1.6vw);
+    }
+  }
 }
 
 .duo-wrapper {
   display: flex;
   flex-direction: column;
-  gap: clamp(12px, 1.8vh, 28px);
-}
+  justify-content: space-evenly;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: clamp(8px, 1.6vh, 3vh) clamp(20px, 3vw, 5vw);
+  gap: clamp(20px, 3.2vh, 5vh);
 
-.racer {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: clamp(14px, 2vw, 40px);
-  align-items: center;
+  .racer {
+    display: grid;
+    grid-template-columns: clamp(140px, 16vw, 20vw) minmax(0, 1fr) clamp(160px, 16vw, 20vw);
+    gap: clamp(16px, 2.4vw, 4vw);
+    align-items: center;
+  }
+
+  .medal {
+    justify-self: start;
+    min-width: clamp(120px, 10vw, 14vw);
+    height: clamp(40px, 5vh, 7.2vh);
+    padding: 0 clamp(16px, 1.4vw, 2.2vw);
+    font-size: clamp(16px, 1.2vw, 1.9vw);
+  }
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    padding-left: clamp(8px, 1.2vw, 2vw);
+  }
+
+  .tag {
+    min-width: clamp(110px, 7.4vw, 11vw);
+    height: clamp(28px, 3.4vh, 5.2vh);
+    margin-bottom: clamp(6px, 0.9vh, 1.4vh);
+    padding: 0 clamp(14px, 1.2vw, 1.8vw);
+    font-size: clamp(14px, 1.05vw, 1.7vw);
+  }
+
+  .name {
+    margin: 0 0 clamp(10px, 1.3vh, 2vh);
+    font-size: clamp(2rem, 3.8vw, 5.6vw);
+    font-weight: 700;
+    line-height: 0.95;
+  }
+
+  .stats {
+    display: flex;
+    align-items: stretch;
+    gap: clamp(16px, 1.8vw, 3vw);
+  }
+
+  .stats__rule {
+    width: clamp(1px, 0.08vw, 3px);
+    background: rgb(255 255 255 / 45%);
+  }
+
+  .stat {
+    gap: 0.15em;
+    font-size: clamp(16px, 1.25vw, 2vw);
+
+    span {
+      color: rgb(255 255 255 / 72%);
+      font-weight: 500;
+    }
+
+    b {
+      font-weight: 700;
+    }
+  }
+
+  .board {
+    justify-self: end;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    max-width: clamp(160px, 16vw, 20vw);
+    padding: clamp(12px, 1.5vh, 2.2vh) clamp(12px, 1.3vw, 1.8vw) clamp(10px, 1.3vh, 1.8vh);
+    border-radius: clamp(20px, 1.5vw, 2.2vw);
+  }
+
+  .board__label {
+    margin: 0 0 clamp(8px, 1vh, 1.4vh);
+    font-size: clamp(14px, 1.05vw, 1.6vw);
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .board__value {
+    padding: clamp(10px, 1.3vh, 1.8vh) 0.4em clamp(8px, 1vh, 1.4vh);
+    border-radius: clamp(12px, 1vw, 1.5vw);
+
+    strong {
+      font-size: clamp(1.6rem, 2.6vw, 3.8vw);
+    }
+
+    span {
+      font-size: clamp(12px, 0.9vw, 1.4vw);
+    }
+  }
 }
 
 .info {
@@ -378,14 +557,6 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.solo-wrapper .name {
-  font-size: clamp(2.2rem, 4.2vw, 6.4rem);
-}
-
-.duo-wrapper .name {
-  font-size: clamp(1.35rem, 2.4vw, 3.6rem);
 }
 
 .stats {
@@ -426,6 +597,7 @@ h2 {
   &--1 {
     color: #3d2a00;
     background: linear-gradient(180deg, #ffe9a3 0%, #e0b33a 52%, #c4921a 100%);
+    transform: scale(1.2);
   }
 
   &--2 {
@@ -442,10 +614,6 @@ h2 {
   text-align: center;
   background: $blue;
   border-radius: clamp(18px, 1.6vw, 32px);
-}
-
-.duo-wrapper .board {
-  width: clamp(120px, 12vw, 260px);
 }
 
 .board__label {
@@ -563,5 +731,10 @@ h2 {
     opacity: 0.9;
     translate: 12px 18px;
   }
+}
+
+hr {
+  width: 100%;
+  border-color: #dfdfdf;
 }
 </style>
