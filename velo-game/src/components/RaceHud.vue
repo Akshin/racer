@@ -4,8 +4,7 @@
  * оформление править дешевле, чем сцену.
  */
 import { computed } from 'vue'
-import botLeftUrl from '@/assets/images/bot_left.png'
-import botRightUrl from '@/assets/images/bot_right.png'
+import MascotAnim from '@/components/MascotAnim.vue'
 
 /** Верх шкалы спидометра, км/ч. */
 const SPEED_MAX = 45
@@ -59,7 +58,7 @@ const displayName = computed(() => props.nick || `Игрок ${props.index + 1}`
 const speed = computed(() => Math.min(Math.max(props.telemetry.speed, 0), SPEED_MAX))
 const speedLabel = computed(() => props.telemetry.speed.toFixed(1))
 const distanceKm = computed(() => (props.telemetry.distance / 1000).toFixed(1))
-const mascotUrl = computed(() => (props.index === 0 ? botLeftUrl : botRightUrl))
+const mascotKind = computed(() => (props.index === 0 ? 'fat' : 'slim'))
 const glowId = computed(() => `hud-glow-${props.index}`)
 const fillId = computed(() => `hud-fill-${props.index}`)
 const needleDeg = computed(() => DIAL_START_DEG + (speed.value / SPEED_MAX) * DIAL_SWEEP_DEG)
@@ -95,7 +94,7 @@ const bubbleVisible = computed(() => {
     <div class="hud__bottom">
       <div class="gauge">
         <p v-if="bubbleVisible" :key="line" class="bubble">{{ line }}</p>
-        <img class="gauge__bot" :src="mascotUrl" alt="" />
+        <MascotAnim class="gauge__bot" :kind="mascotKind" />
         <svg
           class="gauge__dial"
           viewBox="0 0 220 128"
@@ -258,16 +257,16 @@ const bubbleVisible = computed(() => {
 .gauge__bot {
   position: absolute;
   z-index: 3;
-  bottom: 100%;
-  width: 34%;
+  bottom: calc(100% + 0.55em);
+  display: block;
+  width: 42%;
   height: auto;
+  aspect-ratio: 1;
   filter: drop-shadow(0 4px 8px rgb(0 0 0 / 45%));
   pointer-events: none;
-  transform: translateY(32%);
 
   .hud--player-1 & {
     left: 0;
-    transform: translateY(24%);
   }
 
   .hud--player-2 & {
@@ -300,13 +299,13 @@ const bubbleVisible = computed(() => {
   animation: bubble-in 0.4s ease;
 
   .hud--player-1 & {
-    left: 28%;
-    bottom: calc(100% + 0.4em);
+    left: 42%;
+    bottom: calc(100% + 2.4em);
   }
 
   .hud--player-2 & {
-    right: 28%;
-    bottom: calc(100% + 0.4em);
+    right: 42%;
+    bottom: calc(100% + 2.4em);
   }
 
   &::before,

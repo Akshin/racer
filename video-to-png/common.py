@@ -14,8 +14,8 @@ NOBG_DIR = ROOT / "nobg"
 RACER_VIDEOS: tuple[tuple[str, str], ...] = (
     ("racer1", "blue.mov"),
     ("racer2", "red.mov"),
-    ("racer3", "blue_man.mov"),
-    ("racer4", "red_man.mov"),
+    ("racer3", "racer3/blue_man_new.mov"),
+    ("racer4", "racer4/red_man_new.mov"),
 )
 RACERS = tuple(name for name, _ in RACER_VIDEOS)
 TARGET_FRAMES = 48

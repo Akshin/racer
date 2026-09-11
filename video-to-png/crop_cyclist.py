@@ -9,7 +9,8 @@ from PIL import Image
 
 from common import CROPPED_DIR, FRAMES_DIR, racers_from_args, reset_racer_dirs
 
-WHITE = 248
+# 240: чистый белый (~255) и off-white CapCut/H.264 (~245–248). 248 оставлял весь кадр.
+WHITE = 240
 BLACK = 12
 ALPHA_MIN = 16
 PAD_X = 36

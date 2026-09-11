@@ -41,6 +41,22 @@
         },
         {
           "alias": [
+            "race/mascots",
+            "mascots"
+          ],
+          "src": [
+            "race/mascots-0.webp.json",
+            "race/mascots-0.png.json"
+          ],
+          "data": {
+            "tags": {
+              "m": true,
+              "tps": true
+            }
+          }
+        },
+        {
+          "alias": [
             "race/other/mountains.png",
             "race/other/mountains",
             "mountains.png",
@@ -111,8 +127,8 @@
             "racer3"
           ],
           "src": [
-            "race/racer3.webp.json",
-            "race/racer3.png.json"
+            "race/racer3-0.webp.json",
+            "race/racer3-0.png.json"
           ],
           "data": {
             "tags": {
@@ -145,22 +161,6 @@
           "src": [
             "race/trees.webp.json",
             "race/trees.png.json"
-          ],
-          "data": {
-            "tags": {
-              "m": true,
-              "tps": true
-            }
-          }
-        },
-        {
-          "alias": [
-            "race/mascots",
-            "mascots"
-          ],
-          "src": [
-            "race/mascots-0.webp.json",
-            "race/mascots-0.png.json"
           ],
           "data": {
             "tags": {
