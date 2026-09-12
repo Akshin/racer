@@ -25,7 +25,10 @@ fi
 
 NODE_HOME="$SCRIPT_DIR/node/darwin-${ARCH}"
 NODE_BIN="$NODE_HOME/bin/node"
-NPM_BIN="$NODE_HOME/bin/npm"
+# Зовём npm через node и npm-cli.js: bin/npm — симлинк, который может не пережить
+# распаковку архива. Так запуск не зависит от симлинка и от PATH.
+NPM_CLI="$NODE_HOME/lib/node_modules/npm/bin/npm-cli.js"
+npm_run() { "$NODE_BIN" "$NPM_CLI" "$@"; }
 
 if [ ! -x "$NODE_BIN" ]; then
   echo "В архиве нет Node для этого мака ($ARCH)."
@@ -41,6 +44,12 @@ fi
 
 if [ ! -x "$NODE_BIN" ]; then
   echo "Node так и не найден: $NODE_BIN"
+  pause_exit 1
+fi
+
+if [ ! -f "$NPM_CLI" ]; then
+  echo "В архиве нет npm: $NPM_CLI"
+  echo "Пересоберите архив скриптом pack-sensor-test.sh."
   pause_exit 1
 fi
 
@@ -69,7 +78,7 @@ ensure_deps() {
     echo "первый запуск: ставлю зависимости в $(basename "$dir") ..."
     (
       cd "$dir"
-      "$NPM_BIN" install
+      npm_run install
     )
   fi
 }
@@ -114,11 +123,11 @@ echo "Запускаю адаптер и игру..."
 echo "Свисток ANT+ должен быть уже в USB."
 (
   cd "$ROOT/velo-node"
-  "$NPM_BIN" start
+  npm_run start
 ) &
 (
   cd "$ROOT/velo-game"
-  "$NPM_BIN" run dev
+  npm_run run dev
 ) &
 
 echo "Жду, пока игра поднимется..."

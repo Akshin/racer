@@ -56,7 +56,8 @@ fetch_one() {
   rm -rf "$tmp"
 
   xattr -dr com.apple.quarantine "$out" 2>/dev/null || true
-  echo "готово $arch ($("$out/bin/node" -v), npm $("$out/bin/npm" -v))"
+  # npm зовём через node: bin/npm — симлинк с шебангом env node, а системного node может не быть.
+  echo "готово $arch ($("$out/bin/node" -v), npm $("$out/bin/node" "$out/lib/node_modules/npm/bin/npm-cli.js" -v))"
 }
 
 fetch_one "arm64" "$ARM_SHA"

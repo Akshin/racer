@@ -19,7 +19,7 @@ echo "Проверяю Node для MAC/PLAN_B..."
 
 mkdir -p "$DEST"
 
-# --copy-links: zip не умеет нормально таскать симлинки из node_modules и т.п.
+# Исходники проектов: --copy-links, потому что симлинки внутри репо нам не нужны.
 rsync -a --copy-links \
   --exclude node_modules \
   --exclude dist \
@@ -35,6 +35,18 @@ rsync -a --copy-links \
   --exclude .cache \
   "$ROOT/velo-game" \
   "$ROOT/velo-node" \
+  "$DEST/"
+
+# MAC копируем отдельно и БЕЗ --copy-links и БЕЗ --exclude node_modules:
+#   1) в portable Node npm лежит в node/darwin-*/lib/node_modules/npm — общий
+#      --exclude node_modules выкидывал сам npm из архива;
+#   2) bin/npm и bin/npx — симлинки на ../lib/node_modules/npm/bin/*-cli.js,
+#      --copy-links превращал их в копии, и относительный require('../lib/cli.js') ломался.
+# zip ниже вызывается с -y, симлинки сохранятся как симлинки.
+rsync -a \
+  --exclude .DS_Store \
+  --exclude .cache \
+  --exclude '*.log' \
   "$ROOT/MAC" \
   "$DEST/"
 
@@ -50,6 +62,15 @@ if [ -f "$DEST/velo-node/.env" ]; then
 else
   sed 's/^SOURCE=.*/SOURCE=ant/' "$ROOT/velo-node/.env.example" > "$DEST/velo-node/.env"
 fi
+
+# Страховка: без npm внутри portable Node на площадке ничего не поставится.
+for arch in arm64 x64; do
+  npm_cli="$DEST/MAC/PLAN_B/node/darwin-$arch/lib/node_modules/npm/bin/npm-cli.js"
+  if [ ! -f "$npm_cli" ]; then
+    echo "в архив не попал npm для $arch: $npm_cli" >&2
+    exit 1
+  fi
+done
 
 rm -f "$OUT"
 (
