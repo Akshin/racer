@@ -1,97 +1,111 @@
-# Velo — дуэльная гонка на велотренажёрах
+# Velo — head-to-head stationary bike racing
 
-Интерактивная зона для офлайн-мероприятия. Два участника крутят педали на настоящих
-велотренажёрах, а на большом экране их велосипедисты едут наперегонки по
-сплитскрин-дороге. Скорость каждого задаётся реальным каденсом с датчика на шатуне.
-Участники регистрируются с планшета, результаты попадают в общий лидерборд зала.
+An interactive installation built for an offline event. Two people pedal real stationary
+bikes, and on a big screen their cyclists race each other down a split-screen road. Each
+rider's speed comes from the live cadence of a sensor on their crank arm. Participants sign
+up on a tablet, and every result goes to a shared leaderboard.
 
-Проект прошёл весь путь: от чтения сырых пакетов Bluetooth/ANT+ до запуска на
-площадке двойным кликом, без программиста рядом.
+The project covers the whole chain: from parsing raw Bluetooth / ANT+ packets to a
+one-double-click launch on site, with no developer around.
 
-## Как это работает
+![Split-screen race](docs/screenshots/race.jpg)
+
+> The UI is in Russian, as it was built for a Russian-speaking audience. The screenshots
+> were taken with the built-in sensor simulator and demo data. Partner branding has been
+> replaced with placeholders.
+
+## Screens
+
+| | |
+| --- | --- |
+| ![Leaderboard](docs/screenshots/leaderboard.jpg) **Leaderboard**: live table of best distances, looping promo reel | ![Race start](docs/screenshots/start.jpg) **Race start**: solo or duel, pick registered riders |
+| ![Finish](docs/screenshots/finish.jpg) **Finish**: winner, distance, average speed and leaderboard place | ![Hardware check](docs/screenshots/setup.jpg) **Hardware check**: adapter connection, live data from each bike, race settings |
+| ![Registration](docs/screenshots/register.jpg) **Registration (tablet)**: nickname, phone, consent | ![Registration done](docs/screenshots/register-success.jpg) **Registration done** |
+
+## How it works
 
 ```
  Wahoo RPM ×2                                   ┌──────────────────────────┐
- (датчики каденса)                              │  velo-register (планшет) │
-     │  BLE (CSC)  или  ANT+ (USB-свисток)      │  ник, телефон, согласие  │
+ (cadence sensors)                              │  velo-register (tablet)  │
+     │  BLE (CSC)  or  ANT+ (USB stick)         │  nickname, phone, consent│
      ▼                                          └────────────┬─────────────┘
- ┌─────────────────────┐   WebSocket, 20 Гц    ┌─────────────▼─────────────┐
- │ velo-node (Node.js) │ ────────────────────▶ │       Supabase (Postgres) │
- │ каденс → скорость,  │   cadence, speed,     │   участники и рекорды     │
- │ дистанция, привязка │   distance            └─────────────▲─────────────┘
- │ датчиков к игрокам  │                                     │
+ ┌─────────────────────┐   WebSocket, 20 Hz    ┌─────────────▼─────────────┐
+ │ velo-node (Node.js) │ ────────────────────▶ │     Supabase (Postgres)   │
+ │ cadence → speed,    │   cadence, speed,     │   riders and best results │
+ │ distance, sensor-to-│   distance            └─────────────▲─────────────┘
+ │ player binding      │                                     │
  └─────────────────────┘                       ┌─────────────┴─────────────┐
-                         ────────────────────▶ │  velo-game (большой экран)│
-                                               │  Vue 3 + PixiJS 8         │
+                         ────────────────────▶ │   velo-game (big screen)  │
+                                               │   Vue 3 + PixiJS 8        │
                                                └───────────────────────────┘
 ```
 
-Сценарий на площадке:
+On site:
 
-1. Участник регистрируется на планшете: **velo-register** записывает его в Supabase.
-2. Оператор на экране старта выбирает одного или двух участников, режим (соло или дуэль) и пол спрайта.
-3. **velo-node** читает обороты педалей с датчиков, считает скорость и дистанцию и шлёт их игре по WebSocket.
-4. **velo-game** рисует гонку. На финише показывает результат и место, лучший результат сохраняется в БД.
+1. A participant signs up on the tablet, and **velo-register** writes them to Supabase.
+2. On the start screen, the operator picks one or two riders and solo or duel mode.
+3. **velo-node** reads crank revolutions from the sensors, computes speed and distance, and streams them to the game over WebSocket.
+4. **velo-game** renders a one-minute race. At the finish it shows results and leaderboard places, and stores each rider's best distance.
 
-## Компоненты
+## Components
 
-| Папка | Что это | Стек |
+| Folder | What it is | Stack |
 | --- | --- | --- |
-| [`velo-node`](velo-node) | Адаптер датчиков: BLE/ANT+ → телеметрия по WebSocket | Node.js 24, TypeScript, `ws`, `@stoprocent/noble`, `ant-plus-next` |
-| [`velo-game`](velo-game) | Экран гонки, проверка оборудования, старт, лидерборд | Vue 3, Pinia, Vue Router, PixiJS 8, Vite, SCSS, AssetPack |
-| [`velo-register`](velo-register) | Форма регистрации участника для планшета | Vue 3, Vite, Supabase JS |
-| [`supabase/migrations`](supabase/migrations) | Схема БД, RLS-политики, RPC для рекорда | PostgreSQL, Supabase |
-| [`video-to-png`](video-to-png) | Пайплайн спрайтов: видео → кадры → кроп → вырезка фона | Python, Pillow, NumPy, ffmpeg |
-| [`MAC`](MAC), [`WIN`](WIN) | Запуск на площадке двойным кликом, инструкции для неразработчика | bash, cmd |
+| [`velo-node`](velo-node) | Sensor adapter: BLE / ANT+ → telemetry over WebSocket | Node.js 24, TypeScript, `ws`, `@stoprocent/noble`, `ant-plus-next` |
+| [`velo-game`](velo-game) | Race screen, hardware check, start screen, leaderboard | Vue 3, Pinia, Vue Router, PixiJS 8, Vite, SCSS, AssetPack |
+| [`velo-register`](velo-register) | Rider sign-up form for a tablet | Vue 3, Vite, Supabase JS |
+| [`supabase/migrations`](supabase/migrations) | DB schema, RLS policies, RPC for personal bests | PostgreSQL, Supabase |
+| [`video-to-png`](video-to-png) | Sprite pipeline: video → frames → crop → background removal | Python, Pillow, NumPy, ffmpeg |
+| [`MAC`](MAC), [`WIN`](WIN) | Double-click launchers and step-by-step guides for non-developers | bash, cmd |
 
-## Технические решения
+## Technical highlights
 
-**Один интерфейс для трёх источников данных.** BLE, ANT+ и симулятор реализуют общий
-порт `CadenceSource` и отдают уже посчитанный каденс. Ядро (`hub.ts`) не знает, откуда
-пришли данные, а нативные модули грузятся динамически. Поэтому в режиме `mock` проект
-запускается на любой машине без Bluetooth и USB.
+**One interface for three data sources.** BLE, ANT+ and the simulator all implement the
+same `CadenceSource` port and emit ready-made cadence. The core (`hub.ts`) doesn't know
+where the data came from, and native modules are loaded dynamically. As a result, in `mock`
+mode the project runs on any machine without Bluetooth or USB access.
 
-**Каденс из сырых пакетов.** BLE-профиль CSC и ANT+ Bike Cadence передают одинаковые
-поля: накопительные обороты и время последнего оборота в тиках 1/1024 с. Оба поля —
-`uint16`, они регулярно переполняются. Расчёт общий для обоих транспортов
-([`domain/cadence.ts`](velo-node/src/domain/cadence.ts)) и учитывает переполнение.
+**Cadence from raw packets.** The BLE Cycling Speed and Cadence profile and ANT+ Bike
+Cadence carry the same fields: cumulative crank revolutions and the last event time in
+1/1024 s ticks. Both are `uint16` and wrap around regularly. The math is shared between the
+two transports and handles the wrap-around
+([`domain/cadence.ts`](velo-node/src/domain/cadence.ts)).
 
-**Скорость — модель виртуальной передачи.** Wahoo RPM измеряет только каденс, поэтому
-скорость считается как каденс × окружность колеса × передаточное число. Каденс
-сглаживается экспоненциально, а при потере сигнала плавно уходит в ноль, чтобы
-велосипедист на экране не останавливался рывком.
+**Speed via a virtual gear.** Wahoo RPM measures cadence only, so speed is computed as
+cadence × wheel circumference × gear ratio. Cadence is exponentially smoothed. When the
+signal drops, it decays to zero smoothly, so the on-screen rider never stops abruptly.
 
-**Перспектива на 2D-движке вместо 3D.** Дорога, разметка, деревья и баннеры — это
-своя проекция ([`projection.ts`](velo-game/src/game/projection.ts)): камера на
-фиксированной высоте, экранная координата получается делением на расстояние. Статичный
-фон перерисовывается только при изменении размера. Подвижные объекты берутся из
-заранее созданных пулов спрайтов, разметка — один `MeshSimple` на все штрихи, баннеры —
-`PerspectiveMesh`. В кадровом цикле новые объекты не создаются.
+**Perspective on a 2D engine instead of 3D.** The road, lane markings, trees and banners use
+a hand-written projection ([`projection.ts`](velo-game/src/game/projection.ts)): the camera
+sits at a fixed height, and screen position is a division by distance. The static
+background is redrawn only on resize. Moving objects come from pre-allocated sprite pools,
+all lane dashes are a single `MeshSimple`, and banners are `PerspectiveMesh`. The frame loop
+doesn't allocate new display objects.
 
-**HUD отдельно от сцены.** Показатели поверх канваса сверстаны на HTML/CSS: дизайн
-можно менять, не трогая рендер. Сцена получает телеметрию через функцию и ничего не
-знает о Pinia.
+**HUD separate from the scene.** The speedometers and rider panels over the canvas are plain
+HTML/CSS, so the design can change without touching the renderer. The scene receives
+telemetry through a function and knows nothing about Pinia.
 
-**Устойчивость к реальному миру.** Клиент WebSocket сам переподключается после обрыва,
-увеличивая паузу между попытками от 0,5 до 5 с.
-Состояние подключения и пройденная проверка оборудования переживают F5. Датчики можно
-закрепить за игроками по ID или привязать автоматически по порядку обнаружения.
+**Built for real-world conditions.** The WebSocket client reconnects on its own, with
+exponential backoff from 0.5 to 5 s. Connection state and a passed hardware check survive a
+page reload. Sensors can be pinned to players by ID or bound automatically in discovery
+order.
 
-**Запуск без разработчика.** `start.command` / `start.bat` освобождают порты, поднимают
-адаптер и игру и открывают браузер. Для Mac без прав администратора есть `PLAN_B`:
-портативный Node с проверкой SHA-256, без установщика и `sudo`.
-[`pack-sensor-test.sh`](pack-sensor-test.sh) собирает всё это в один zip для площадки.
+**No developer required on site.** `start.command` / `start.bat` free the ports, start the
+adapter and the game, and open the browser. For Macs without admin rights, `PLAN_B` ships a
+portable Node with SHA-256 verification, with no installer and no `sudo`.
+[`pack-sensor-test.sh`](pack-sensor-test.sh) bundles everything into a single zip for the venue.
 
-**Типы без сборки.** `velo-node` исполняется Node 24 напрямую (нативное срезание типов
-TypeScript), шаг компиляции не нужен. Все типы адаптера — в одном файле с явным
-разделом «Контракт с velo-game».
+**TypeScript without a build step.** `velo-node` runs directly on Node 24 thanks to native
+type stripping. All adapter types live in one file, with an explicit "contract with
+velo-game" section mirrored on the frontend.
 
-## Запуск локально (без велотренажёров)
+## Running locally (no bikes needed)
 
-Нужен Node.js 24+.
+Requires Node.js 24+.
 
 ```sh
-# 1. Адаптер в режиме симулятора: два виртуальных велосипедиста
+# 1. Adapter in simulator mode: two virtual riders
 cd velo-node
 npm install
 cp .env.example .env
@@ -99,34 +113,36 @@ SOURCE=mock npm start          # ws://localhost:8080
 ```
 
 ```sh
-# 2. Игра
+# 2. Game
 cd velo-game
 npm install
-cp .env.example .env           # URL и anon key своего проекта Supabase
+cp .env.example .env           # URL and anon key of your Supabase project
 npm run dev                    # http://localhost:5173
 ```
 
-На странице проверки нажмите «Подключиться»: оба тренажёра получат данные от симулятора.
-Для экранов старта, лидерборда и регистрации нужен собственный проект Supabase: примените
-миграции из `supabase/migrations` и заполните `.env` в `velo-game` и `velo-register`.
+On the hardware check page, click "Подключиться" (Connect), and both bikes start receiving
+simulator data. The start screen, leaderboard and registration need a Supabase project of
+your own: apply the migrations from `supabase/migrations` and fill in `.env` in `velo-game`
+and `velo-register`.
 
 ```sh
-# 3. Регистрация (по желанию)
+# 3. Registration (optional)
 cd velo-register
 npm install
 cp .env.example .env
 npm run dev
 ```
 
-Подробнее об устройстве адаптера и протоколе — в [`velo-node/README.md`](velo-node/README.md),
-об игре — в [`velo-game/README.md`](velo-game/README.md).
+For details on the adapter and its protocol, see [`velo-node/README.md`](velo-node/README.md)
+and [`velo-game/README.md`](velo-game/README.md) (both in Russian).
 
-## Запуск на площадке
+## On-site launch
 
-Для операторов без опыта программирования — папки **WIN** и **MAC**, не корень репозитория.
+Operators without programming experience use the **WIN** and **MAC** folders, not the
+repository root. Each has a double-click launcher and a step-by-step guide (in Russian).
 
-| Компьютер | Папка | Запуск | Инструкция |
+| Computer | Folder | Launch | Guide |
 | --- | --- | --- | --- |
-| Windows | `WIN` | двойной клик по `start.bat` | `WIN/ИНСТРУКЦИЯ.txt` |
-| macOS | `MAC` | двойной клик по `start.command` | `MAC/ИНСТРУКЦИЯ.txt` |
-| macOS без прав администратора | `MAC/PLAN_B` | двойной клик по `start.command` | `MAC/PLAN_B/ИНСТРУКЦИЯ.txt` |
+| Windows | `WIN` | double-click `start.bat` | `WIN/ИНСТРУКЦИЯ.txt` |
+| macOS | `MAC` | double-click `start.command` | `MAC/ИНСТРУКЦИЯ.txt` |
+| macOS without admin rights | `MAC/PLAN_B` | double-click `start.command` | `MAC/PLAN_B/ИНСТРУКЦИЯ.txt` |
