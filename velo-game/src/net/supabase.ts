@@ -1,5 +1,5 @@
 /**
- * Клиент Supabase для бэкенда игры (HOFF).
+ * Клиент Supabase для бэкенда игры.
  * URL и anon key — из Vite env; service role сюда не кладём.
  */
 

@@ -153,16 +153,15 @@ export class Lane {
     if (this.#sun) this.#sun.anchor.set(0.5, 0.5)
     if (this.#mountains) this.#mountains.anchor.set(0.5, MOUNTAINS_ANCHOR_Y)
 
-    // Деревья выкл. Раскомментировать блок, чтобы вернуть деревья на обочине.
-    // this.#treeTextures = raceSheetTextures('trees')
-    // const treeCount = TREE_SLOTS_PER_SIDE * 2
-    // for (let i = 0; i < treeCount; i++) {
-    //   const sprite = new Sprite({ texture: this.#treeTextures[0] ?? Texture.EMPTY })
-    //   sprite.anchor.set(0.5, 1)
-    //   sprite.visible = false
-    //   this.#treePool.push(sprite)
-    //   this.#trees.addChild(sprite)
-    // }
+    this.#treeTextures = raceSheetTextures('trees')
+    const treeCount = TREE_SLOTS_PER_SIDE * 2
+    for (let i = 0; i < treeCount; i++) {
+      const sprite = new Sprite({ texture: this.#treeTextures[0] ?? Texture.EMPTY })
+      sprite.anchor.set(0.5, 1)
+      sprite.visible = false
+      this.#treePool.push(sprite)
+      this.#trees.addChild(sprite)
+    }
 
     // Флаги выкл. Раскомментировать блок, чтобы вернуть паруса у дороги.
     // this.#flagTextures = raceSheetTextures('flags')
@@ -224,14 +223,12 @@ export class Lane {
     this.#offline.visible = false
 
     this.view.addChild(this.#sky)
-    // Солнце выкл. Раскомментировать, чтобы вернуть диск и свечение.
-    // if (this.#sun !== null) {
-    //   this.#sunGlow.blendMode = 'add'
-    //   this.view.addChild(this.#sunGlow, this.#sun)
-    // }
+    if (this.#sun !== null) {
+      this.#sunGlow.blendMode = 'add'
+      this.view.addChild(this.#sunGlow, this.#sun)
+    }
     this.view.addChild(this.#ground)
-    // Горы выкл. Раскомментировать, чтобы вернуть хребет на горизонте.
-    // if (this.#mountains !== null) this.view.addChild(this.#mountains)
+    if (this.#mountains !== null) this.view.addChild(this.#mountains)
     this.view.addChild(this.#berm, this.#road, this.#dashes, this.#trees)
     if (this.#cyclist !== null) this.view.addChild(this.#cyclist)
     this.view.addChild(this.#offline, this.#mask)
@@ -249,7 +246,7 @@ export class Lane {
     this.#drawBerms()
     this.#drawRoad()
     this.#layoutOffline()
-    // this.#drawTrees()
+    this.#drawTrees()
     // this.#drawFlags()
     this.#drawBanners()
     this.#drawDashes()
@@ -289,7 +286,7 @@ export class Lane {
     this.#offline.visible = !telemetry.connected
     this.#visualScale = visualScale
     this.#raceDistanceM = raceDistanceM
-    // this.#drawTrees()
+    this.#drawTrees()
     // this.#drawFlags()
     this.#drawBanners()
     this.#drawDashes()
@@ -301,7 +298,7 @@ export class Lane {
     if (this.#visualScale === visualScale && this.#raceDistanceM === raceDistanceM) return
     this.#visualScale = visualScale
     this.#raceDistanceM = raceDistanceM
-    // this.#drawTrees()
+    this.#drawTrees()
     // this.#drawFlags()
     this.#drawBanners()
     this.#drawDashes()
@@ -313,7 +310,7 @@ export class Lane {
     this.#traveled = 0
     this.#ignoreAdapterDistance = true
     this.#snapSpeedOnStart = true
-    // this.#drawTrees()
+    this.#drawTrees()
     // this.#drawFlags()
     this.#drawBanners()
     this.#drawDashes()
@@ -329,7 +326,7 @@ export class Lane {
     this.#speed += (0 - this.#speed) * catchUp
     if (this.#speed < 0.08) this.#speed = 0
     this.#traveled += this.#speed * KMH_TO_MS * (deltaMs / 1000)
-    // this.#drawTrees()
+    this.#drawTrees()
     // this.#drawFlags()
     this.#drawBanners()
     this.#drawDashes()
@@ -394,41 +391,35 @@ export class Lane {
   /** Солнце над хребтом, оба на дальнем фоне — не едут с дорогой. */
   #layoutHorizon(): void {
     const { width, height, centerX, horizonY } = this.#projection
-    void width
-    void height
-    void centerX
-    void horizonY
 
-    // Горы выкл. Раскомментировать вместе с addChild в конструкторе.
-    // if (this.#mountains !== null) {
-    //   const rangeWidth = width * MOUNTAINS_WIDTH_RATIO
-    //   const scaleX = rangeWidth / this.#mountains.texture.width
-    //   this.#mountains.scale.set(scaleX)
-    //   this.#mountains.position.set(centerX, horizonY)
-    // }
+    if (this.#mountains !== null) {
+      const rangeWidth = width * MOUNTAINS_WIDTH_RATIO
+      const scaleX = rangeWidth / this.#mountains.texture.width
+      this.#mountains.scale.set(scaleX)
+      this.#mountains.position.set(centerX, horizonY)
+    }
 
-    // Солнце выкл. Раскомментировать вместе с addChild в конструкторе.
-    // if (this.#sun !== null) {
-    //   const texture = this.#sun.texture
-    //   const contentW = (SUN_CONTENT_RIGHT - SUN_CONTENT_LEFT) * texture.width
-    //   this.#sun.scale.set((width * SUN_WIDTH_RATIO) / contentW)
-    //
-    //   const peakY =
-    //     this.#mountains === null
-    //       ? horizonY * 0.55
-    //       : horizonY - (MOUNTAINS_ANCHOR_Y - MOUNTAINS_CONTENT_TOP) * this.#mountains.height
-    //   const diskTopPx = SUN_CONTENT_TOP * this.#sun.height
-    //   const diskHeight = (SUN_CONTENT_BOTTOM - SUN_CONTENT_TOP) * this.#sun.height
-    //   const diskTop = Math.max(
-    //     height * SUN_TOP_MARGIN_RATIO,
-    //     peakY - height * SUN_PEAK_GAP_RATIO - diskHeight,
-    //   )
-    //   this.#sun.position.set(
-    //     centerX + width * SUN_OFFSET_X_RATIO,
-    //     diskTop - diskTopPx + this.#sun.height / 2,
-    //   )
-    //   this.#drawSunGlow()
-    // }
+    if (this.#sun !== null) {
+      const texture = this.#sun.texture
+      const contentW = (SUN_CONTENT_RIGHT - SUN_CONTENT_LEFT) * texture.width
+      this.#sun.scale.set((width * SUN_WIDTH_RATIO) / contentW)
+
+      const peakY =
+        this.#mountains === null
+          ? horizonY * 0.55
+          : horizonY - (MOUNTAINS_ANCHOR_Y - MOUNTAINS_CONTENT_TOP) * this.#mountains.height
+      const diskTopPx = SUN_CONTENT_TOP * this.#sun.height
+      const diskHeight = (SUN_CONTENT_BOTTOM - SUN_CONTENT_TOP) * this.#sun.height
+      const diskTop = Math.max(
+        height * SUN_TOP_MARGIN_RATIO,
+        peakY - height * SUN_PEAK_GAP_RATIO - diskHeight,
+      )
+      this.#sun.position.set(
+        centerX + width * SUN_OFFSET_X_RATIO,
+        diskTop - diskTopPx + this.#sun.height / 2,
+      )
+      this.#drawSunGlow()
+    }
   }
 
   /** Мягкий персиковый ареол за диском. */

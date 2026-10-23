@@ -4,14 +4,12 @@
  * Слева — ролики витрины и маскот; справа — таблица и кнопка старта.
  */
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
-import clip1 from '@/assets/video/1.mp4'
-import clip2 from '@/assets/video/2.mp4'
-import clip3 from '@/assets/video/3.mp4'
-import clip4 from '@/assets/video/4.mp4'
+import promoPlaceholder from '@/assets/video/promo-placeholder.mp4'
 import { getUsers, sortUsersByMeters, type VeloUser } from '@/net/usersApi'
 
 const POLL_MS = 2000
-const CLIPS = [clip1, clip2, clip3, clip4] as const
+/** Ролики витрины крутятся по кругу. В репозитории — заглушка вместо промо партнёра. */
+const CLIPS = [promoPlaceholder] as const
 
 const users = ref<VeloUser[]>([])
 const loadError = ref('')
@@ -23,7 +21,7 @@ let poll: number | undefined
 let closed = false
 
 const leaders = computed(() => sortUsersByMeters(users.value))
-const clipSrc = computed(() => CLIPS[clipIndex.value] ?? clip1)
+const clipSrc = computed(() => CLIPS[clipIndex.value] ?? promoPlaceholder)
 
 async function refresh(): Promise<void> {
   if (inflight) return
@@ -104,12 +102,17 @@ onBeforeUnmount(() => {
 
           <p class="bubble">
             <span>Смотри спорт</span>
-            <span>в VK Видео</span>
+            <span>вместе с партнёром</span>
           </p>
         </section>
 
         <section class="section-2">
-          <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+          <img
+            class="logo"
+            src="@/assets/images/partner_logo.png"
+            alt="Логотип партнёра"
+            draggable="false"
+          />
           <h1 class="title">Турнирная таблица</h1>
 
           <p v-if="loadError" class="banner" role="alert">{{ loadError }}</p>

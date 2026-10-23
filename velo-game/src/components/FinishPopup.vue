@@ -270,7 +270,12 @@ onBeforeUnmount(() => {
 
     <div class="frame frame--red">
       <div class="frame frame--blue">
-        <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+        <img
+          class="logo"
+          src="@/assets/images/partner_logo.png"
+          alt="Логотип партнёра"
+          draggable="false"
+        />
         <h2>{{ title }}</h2>
         <div class="black-panel-wrapper">
           <div v-if="over" class="over-wrapper">
@@ -280,7 +285,7 @@ onBeforeUnmount(() => {
               <p class="hold__text">
                 Забери свой подарок
                 <br />
-                от VK Video
+                от партнёра
               </p>
             </div>
             <div class="end" aria-hidden="true">
@@ -353,13 +358,7 @@ onBeforeUnmount(() => {
                     alt=""
                     draggable="false"
                   />
-                  <img
-                    v-else
-                    class="slim"
-                    src="@/assets/gifs/slim.gif"
-                    alt=""
-                    draggable="false"
-                  />
+                  <img v-else class="slim" src="@/assets/gifs/slim.gif" alt="" draggable="false" />
                   <div class="board">
                     <p class="board__label">Место в турнирной таблице</p>
                     <p class="board__value">

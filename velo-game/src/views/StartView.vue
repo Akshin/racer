@@ -135,7 +135,12 @@ onBeforeUnmount(() => {
         </section>
 
         <section class="section-2">
-          <img class="logo" src="@/assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+          <img
+            class="logo"
+            src="@/assets/images/partner_logo.png"
+            alt="Логотип партнёра"
+            draggable="false"
+          />
           <h1 class="title">Начало гонки</h1>
           <p class="lead">
             У тебя 1 минута, чтобы проехать

@@ -24,7 +24,12 @@ function goToRegister(): void {
         </section>
 
         <section class="section-2">
-          <img class="logo" src="../assets/images/vk_logo.png" alt="VK Видео" draggable="false" />
+          <img
+            class="logo"
+            src="../assets/images/partner_logo.png"
+            alt="Логотип партнёра"
+            draggable="false"
+          />
           <p class="bubble" :style="{ '--bubble-bg': `url(${bubbleBlue})` }">
             <span>Хорошо!</span>
             <span>Подожди, когда</span>
